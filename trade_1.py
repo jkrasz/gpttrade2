@@ -1,13 +1,7 @@
-
+# Import necessary libraries
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from stable_baselines3 import PPO
-from custom_env import StockTradingEnv
-from stable_baselines3.common.vec_env import DummyVecEnv
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import ta
 from datetime import datetime, timedelta, time
 import pytz
@@ -18,157 +12,135 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout
 import os
 from dotenv import load_dotenv
 
-
-# Market open check function
+# Improved market open check function
 def is_market_open():
-    opening_time = time(9, 30)
-    closing_time = time(16, 0)
-    now = datetime.now(pytz.timezone('US/Eastern'))
-    return opening_time <= now.time() <= closing_time and now.weekday() < 5
+    ny_time = datetime.now(pytz.timezone('America/New_York'))
+    opening_time, closing_time = pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 9, 30)), pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 16, 0))
+    return opening_time <= ny_time <= closing_time and ny_time.weekday() < 5
 
-# Send email function
-def send_email(subject, content):
-    sender_email = 'chatGptTrade@gmail.com'
-    sender_password = 'bymwlvzzmbzxeeas'  # In a real scenario, use a secure method to store and access credentials
-    receiver_email = 'john.kraszewski@gmail.com'
-    smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
-    smtp_server.starttls()
-    smtp_server.login(sender_email, sender_password)
-    message = f"""Subject: {subject}\n\n{content}"""
-    print(message)
-    try:
-        smtp_server.sendmail(sender_email, receiver_email, message)
-    except Exception as e:
-        print("Error sending email: ", e)
-    smtp_server.quit()
+# Buy conditions function
+def should_buy(current_data, average_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, 
+               macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2):
+    # Use the 'get' method to prevent KeyError
+    rsi = current_data.get('momentum_rsi', 0)
+    macd = current_data.get('trend_macd', 0)
+    macd_signal = current_data.get('trend_macd_signal', 0)
+    bb_middle_band = current_data.get('volatility_bbh', 0)
+    bb_std = current_data.get('volatility_bbl', 0)
+    bb_lower_band = bb_middle_band - (bollinger_band_std_dev * bb_std)
 
-# Fetch and process data function
-def fetch_data(symbol='GPRO'):
+    # Buy Signal Conditions
+    volume_signal = current_data.get('Volume', 0) > average_volume
+    ema_signal = ema_short > ema_long
+    macd_signal = macd > macd_signal_threshold and macd > macd_signal
+    bollinger_signal = current_data.get('Close', 0) <= bb_lower_band
+    rsi_signal = rsi < threshold_rsi_buy
+
+    # Aggregating Signals
+    buy_signal = volume_signal and ema_signal and macd_signal and bollinger_signal and rsi_signal
+    return buy_signal
+
+# Sell conditions function
+def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70):
+    current_price = current_data.get('Close', 0)
+    rsi = current_data.get('momentum_rsi', 0)
+    sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or \
+                  current_price >= buy_price * (1 + take_profit_percent) or \
+                  rsi > threshold_rsi_sell
+    return sell_signal
+
+def fetch_data(symbol='GPRO', lookback_period=365):
+    required_data_points = 20  # Adjust based on your indicator needs
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)  # Use last year's data for training
+    start_date = end_date - timedelta(days=lookback_period)
     data = yf.download(symbol, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
-    data.replace(0, np.nan, inplace=True)
-    data = ta.add_all_ta_features(data, open="Open", high="High", low="Low", close="Close", volume="Volume", fillna=True)
-    data['RSI'] = ta.momentum.rsi(data['Close']).fillna(50)  # Replace NaN values with a neutral RSI value like 50
-    data['SMA_5'] = data['Close'].rolling(window=5).mean()
-    data['SMA_20'] = data['Close'].rolling(window=20).mean()
-    data['MACD'] = data['Close'].ewm(span=12, adjust=False).mean() - data['Close'].ewm(span=26, adjust=False).mean()
-    data['RSI'] = ta.momentum.rsi(data['Close'])
-    data['ATR'] = ta.volatility.average_true_range(data['High'], data['Low'], data['Close'])
-    data['EMA'] = ta.trend.ema_indicator(data['Close'])
-    data['MFI'] = ta.volume.money_flow_index(data['High'], data['Low'], data['Close'], data['Volume'])
-    macd_indicator = ta.trend.MACD(data['Close'])
-    data['MACD_Line'] = macd_indicator.macd()
-    data['Signal_Line'] = macd_indicator.macd_signal()
-    data['RSI_Avg'] = data['RSI'].rolling(window=5).mean()
-    data['Volatility'] = data['Close'].rolling(window=20).std()
-    data.dropna(inplace=True)
-    # Ensure 'RSI' is in DataFrame
-    print(data.columns)  # Debugging: Verify that 'RSI' is a column name
 
+    if data.empty:
+        raise ValueError("No data fetched for the symbol with the specified lookback period.")
+
+    data.replace(0, np.nan, inplace=True)
+    data.dropna(inplace=True)
+
+    if len(data) < required_data_points:
+        raise ValueError("Not enough data for technical analysis. Increase lookback period.")
+
+    data = ta.add_all_ta_features(data, "Open", "High", "Low", "Close", "Volume", fillna=True)
+    
     return data
 
-# Build LSTM model function
+# Build LSTM model
 def build_lstm_model(input_shape, units=50, dropout_rate=0.2):
     model = Sequential([
-        LSTM(units=units, return_sequences=True, input_shape=input_shape),
+        LSTM(units, return_sequences=True, input_shape=input_shape),
         Dropout(dropout_rate),
-        LSTM(units=units),
+        LSTM(units),
         Dropout(dropout_rate),
         Dense(units=1)
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
     return model
 
-# Preprocess data for LSTM
+# Preprocess data for LSTM and strategy use
 def preprocess_data(data):
     scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(data[['Close', 'Volume', 'momentum_rsi', 'trend_macd', 'trend_macd_signal']])
-    return scaled_data
+    features = [
+        'Close', 'Volume', 'momentum_rsi', 'trend_macd', 'trend_macd_signal',
+        'volatility_bbh', 'volatility_bbl', 'volatility_bbm', 'volatility_bbhi', 'volatility_bbli', 
+        'volatility_kcc', 'volatility_kch', 'volatility_kcl', 'volatility_dcl', 'volatility_dch',
+        'trend_sma_fast', 'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow', 'volatility_atr', 'volume_mfi'
+        ]
+    # Check if all required features are present
+    missing_cols = [col for col in features if col not in data.columns]
+    if missing_cols:
+        raise ValueError(f"Missing columns in data: {missing_cols}")
 
-# Dynamic stop loss and take profit
-def dynamic_stop_loss_percent(volatility):
-    return max(0.90, 1 - volatility / 100)
-
-def dynamic_take_profit_percent(volatility):
-    return min(1.15, 1 + volatility / 50)
-
-# Main function
+    scaled_data = scaler.fit_transform(data[features])
+    return scaled_data, scaler
 def main():
+    load_dotenv() # Load environment variables
     symbol = 'GPRO'
-    threshold_rsi_sell = 70
-    stop_loss_percent = 0.95
-    take_profit_percent = 1.1
-    threshold_rsi_buy = 30
-    actions = []
-    in_position = False
     data = fetch_data(symbol)
-    average_volatility = data['volatility_atr'].mean()
-    processed_data = preprocess_data(data)
-    lstm_model = build_lstm_model((processed_data.shape[1], 1))
-    lstm_model.fit(processed_data, data['Close'], epochs=10, batch_size=32)
-    env = DummyVecEnv([lambda: StockTradingEnv(data)])
-    model = PPO("MlpPolicy", env, verbose=1)
+    processed_data, scaler = preprocess_data(data)
+    input_shape = (processed_data.shape[1], 1)  # features, 1 time step
+    lstm_model = build_lstm_model(input_shape)
+    X_train = processed_data[:-1].reshape(-1, processed_data.shape[1], 1)
+    y_train = data['Close'].values[1:]
+    lstm_model.fit(X_train, y_train, epochs=10, batch_size=32)
+
+    in_position = False
+    buy_price = 0  # Initialize buy_price to track the price at which we bought
 
     while True:
-        #if True:
-        if is_market_open():
-            current_data = fetch_data()  # Efficiently fetch and preprocess only new data
-            processed_current_data = preprocess_data(current_data)
-            lstm_predictions = lstm_model.predict(processed_current_data)
-            model.learn(total_timesteps=20000)
-            last_data_point_index = len(data) - 1
-            obs = env.reset()
+        if is_market_open() or True:  # Replace 'True' with actual market open check
+            latest_data = fetch_data(symbol, lookback_period=60)  # Fetching the last 60 days
+            if not latest_data.empty:
+                latest_processed, _ = preprocess_data(latest_data)
+                latest_scaled = latest_processed[-1].reshape(-1, latest_processed.shape[1], 1)
+                predicted_close_price = lstm_model.predict(latest_scaled)[-1, 0]
+                current_data = latest_data.iloc[-1].to_dict()
 
-            for i in range(len(data)):
-                close_price = data.iloc[i]['Close']
-                rsi = data.iloc[i]['RSI']
-                macd = data.iloc[i]['MACD_Line']
-                signal = data.iloc[i]['Signal_Line']
-                volatility = data.iloc[i]['Volatility']
-                ema_short = data.iloc[i]['EMA']  # Assuming you have this column after preprocessing
-                ema_long = data.iloc[i]['SMA_20']  # Assuming this represents a longer period EMA
-                
-                # Adjust thresholds based on volatility
-                if volatility > average_volatility:  # Assuming you've calculated average_volatility beforehand
-                    threshold_rsi_buy += 5  # Making it harder to buy in high volatility
-                    threshold_rsi_sell -= 5  # Easier to sell
-                else:
-                    threshold_rsi_buy -= 5  # Easier to buy in low volatility
-                    threshold_rsi_sell += 5  # Harder to sell
+                avg_volume = latest_data['Volume'].rolling(window=20).mean().iloc[-1]
+                ema_short = latest_data['Close'].ewm(span=12, adjust=False).mean().iloc[-1]
+                ema_long = latest_data['Close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
-                # Trend confirmation
-                trend_up = ema_short > ema_long
-                trend_down = ema_short < ema_long
-
-                # Dynamic stop-loss and take-profit
-                stop_loss_percent = dynamic_stop_loss_percent(volatility)
-                take_profit_percent = dynamic_take_profit_percent(volatility)
-                
-                # Position sizing (example: risking 1% of account balance per trade)
-                account_balance = 10000  # Example account balance
-                risk_per_trade = 0.01
-                trade_risk = account_balance * risk_per_trade
-                position_size = trade_risk / (close_price * stop_loss_percent)
-
-                if not in_position and rsi < threshold_rsi_buy and macd > signal and trend_up:
+                if not in_position and should_buy(current_data, avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2):
                     in_position = True
-                    buy_price = close_price
-                    actions.append((i, "Buy", close_price, position_size))
-                    if i == last_data_point_index:
-                        send_email("Buy Signal", f"Buy {position_size} units at price {close_price}")
-                elif in_position:
-                    if (rsi > threshold_rsi_sell or macd < signal or close_price <= buy_price * stop_loss_percent or close_price >= buy_price * take_profit_percent) and trend_down:
-                        in_position = False
-                        actions.append((i, "Sell", close_price, position_size))
-                        if i == last_data_point_index:
-                            send_email("Sell Signal", f"Sell {position_size} units at price {close_price}")
+                    buy_price = current_data['Close']
+                    print(f"Buy at {buy_price}")
+                elif in_position and should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70):
+                    in_position = False
+                    sell_price = current_data['Close']
+                    print(f"Sell at {sell_price}")
+                    buy_price = 0  # Reset buy_price after selling
+            else:
+                print("Latest data is empty. Skipping this cycle.")
 
-            print("Simulation Completed! Sleeping...")
-            sleep(60 * 15)  # Efficient use of sleep based on market status
+            sleep(60)  # Wait a minute before the next iteration
         else:
-            print("Market is closed. Sleeping...")
-            sleep(60 * 15)
+            print("Market closed. Waiting...")
+            sleep(300)  # Check every 5 minutes
 
 if __name__ == "__main__":
     main()
+
+
