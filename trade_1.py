@@ -25,29 +25,22 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
                macd_signal_threshold=0, bollinger_band_window=20, 
                bollinger_band_std_dev=2, price_jump_threshold=1.03):
 
-    # Extracting indicator values from current_data with defaults to avoid KeyError
-    rsi = current_data.get('momentum_rsi', 100)  # Default to 100, which is not oversold
+    rsi = current_data.get('momentum_rsi', 100)  # Default to avoid error if not found
     macd = current_data.get('trend_macd', 0)
     macd_signal = current_data.get('trend_macd_signal', 0)
     volume = current_data.get('Volume', 0)
     close_price = current_data.get('Close', 0)
-    bb_lower_band = current_data.get('volatility_bbl', np.inf)  # Default to high to avoid false low band signals
+    bb_lower_band = current_data.get('volatility_bbl', np.inf)  # Default to avoid error if not found
 
-    # Standard conditions
     volume_condition = volume > average_volume * threshold_volume_increase
     ema_condition = ema_short > ema_long
     rsi_condition = rsi < threshold_rsi_buy
     macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)
     bollinger_condition = close_price <= bb_lower_band
-
-    # AI-driven condition: Predicted future price indicates significant jump
     ai_condition = predicted_close_price > close_price * price_jump_threshold
     
-    # Combining all conditions to form a final buy signal
     buy_signal = volume_condition and ema_condition and rsi_condition and macd_condition and bollinger_condition and ai_condition
-    
     return buy_signal
-
 
 # Sell conditions function
 def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70):
