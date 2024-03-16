@@ -20,38 +20,34 @@ def is_market_open():
 
 # Buy conditions function
 # Enhanced Buy conditions function
-def should_buy(current_data, average_volume, ema_short, ema_long, 
+def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long, 
                threshold_rsi_buy=30, threshold_volume_increase=1.2, 
                macd_signal_threshold=0, bollinger_band_window=20, 
-               bollinger_band_std_dev=2, stochastic_k_threshold=20, 
-               roc_threshold=5, aroon_up_threshold=70):
+               bollinger_band_std_dev=2, price_jump_threshold=1.03):
 
-    rsi = current_data.get('momentum_rsi', 0)
-    stochastic_k = current_data.get('momentum_stoch', 0)
-    roc = current_data.get('momentum_roc', 0)
-    aroon_up = current_data.get('trend_aroon_up', 0)
+    # Extracting indicator values from current_data with defaults to avoid KeyError
+    rsi = current_data.get('momentum_rsi', 100)  # Default to 100, which is not oversold
     macd = current_data.get('trend_macd', 0)
     macd_signal = current_data.get('trend_macd_signal', 0)
     volume = current_data.get('Volume', 0)
     close_price = current_data.get('Close', 0)
-    bb_lower_band = current_data.get('volatility_bbl', 0)
+    bb_lower_band = current_data.get('volatility_bbl', np.inf)  # Default to high to avoid false low band signals
 
-    # Aggregate all conditions
+    # Standard conditions
     volume_condition = volume > average_volume * threshold_volume_increase
-    price_condition = close_price <= bb_lower_band  # Price is at or below lower Bollinger Band
-    ema_condition = ema_short > ema_long  # EMA bullish crossover
-    rsi_condition = rsi < threshold_rsi_buy  # RSI is oversold
-    stochastic_condition = stochastic_k < stochastic_k_threshold  # Stochastic is oversold
-    roc_condition = roc > roc_threshold  # Positive Rate of Change indicates upward momentum
-    aroon_condition = aroon_up > aroon_up_threshold  # Strong upward trend indicated by Aroon
-    macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)  # MACD is above signal line and threshold
+    ema_condition = ema_short > ema_long
+    rsi_condition = rsi < threshold_rsi_buy
+    macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)
+    bollinger_condition = close_price <= bb_lower_band
 
-    # Combine all signals
-    buy_signal = (volume_condition and price_condition and ema_condition and
-                  rsi_condition and stochastic_condition and roc_condition and
-                  aroon_condition and macd_condition)
-
+    # AI-driven condition: Predicted future price indicates significant jump
+    ai_condition = predicted_close_price > close_price * price_jump_threshold
+    
+    # Combining all conditions to form a final buy signal
+    buy_signal = volume_condition and ema_condition and rsi_condition and macd_condition and bollinger_condition and ai_condition
+    
     return buy_signal
+
 
 # Sell conditions function
 def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70):
@@ -135,12 +131,14 @@ def main():
                 latest_scaled = latest_processed[-1].reshape(-1, latest_processed.shape[1], 1)
                 predicted_close_price = lstm_model.predict(latest_scaled)[-1, 0]
                 current_data = latest_data.iloc[-1].to_dict()
+                predicted_close_price = lstm_model.predict(latest_scaled)[-1, 0]
+
 
                 avg_volume = latest_data['Volume'].rolling(window=20).mean().iloc[-1]
                 ema_short = latest_data['Close'].ewm(span=12, adjust=False).mean().iloc[-1]
                 ema_long = latest_data['Close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
-                if not in_position and should_buy(current_data, avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2):
+                if not in_position and should_buy(predicted_close_price, current_data, avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2):
                     in_position = True
                     buy_price = current_data['Close']
                     print(f"Buy at {buy_price}")
@@ -160,5 +158,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
