@@ -19,25 +19,38 @@ def is_market_open():
     return opening_time <= ny_time <= closing_time and ny_time.weekday() < 5
 
 # Buy conditions function
-def should_buy(current_data, average_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, 
-               macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2):
-    # Use the 'get' method to prevent KeyError
+# Enhanced Buy conditions function
+def should_buy(current_data, average_volume, ema_short, ema_long, 
+               threshold_rsi_buy=30, threshold_volume_increase=1.2, 
+               macd_signal_threshold=0, bollinger_band_window=20, 
+               bollinger_band_std_dev=2, stochastic_k_threshold=20, 
+               roc_threshold=5, aroon_up_threshold=70):
+
     rsi = current_data.get('momentum_rsi', 0)
+    stochastic_k = current_data.get('momentum_stoch', 0)
+    roc = current_data.get('momentum_roc', 0)
+    aroon_up = current_data.get('trend_aroon_up', 0)
     macd = current_data.get('trend_macd', 0)
     macd_signal = current_data.get('trend_macd_signal', 0)
-    bb_middle_band = current_data.get('volatility_bbh', 0)
-    bb_std = current_data.get('volatility_bbl', 0)
-    bb_lower_band = bb_middle_band - (bollinger_band_std_dev * bb_std)
+    volume = current_data.get('Volume', 0)
+    close_price = current_data.get('Close', 0)
+    bb_lower_band = current_data.get('volatility_bbl', 0)
 
-    # Buy Signal Conditions
-    volume_signal = current_data.get('Volume', 0) > average_volume
-    ema_signal = ema_short > ema_long
-    macd_signal = macd > macd_signal_threshold and macd > macd_signal
-    bollinger_signal = current_data.get('Close', 0) <= bb_lower_band
-    rsi_signal = rsi < threshold_rsi_buy
+    # Aggregate all conditions
+    volume_condition = volume > average_volume * threshold_volume_increase
+    price_condition = close_price <= bb_lower_band  # Price is at or below lower Bollinger Band
+    ema_condition = ema_short > ema_long  # EMA bullish crossover
+    rsi_condition = rsi < threshold_rsi_buy  # RSI is oversold
+    stochastic_condition = stochastic_k < stochastic_k_threshold  # Stochastic is oversold
+    roc_condition = roc > roc_threshold  # Positive Rate of Change indicates upward momentum
+    aroon_condition = aroon_up > aroon_up_threshold  # Strong upward trend indicated by Aroon
+    macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)  # MACD is above signal line and threshold
 
-    # Aggregating Signals
-    buy_signal = volume_signal and ema_signal and macd_signal and bollinger_signal and rsi_signal
+    # Combine all signals
+    buy_signal = (volume_condition and price_condition and ema_condition and
+                  rsi_condition and stochastic_condition and roc_condition and
+                  aroon_condition and macd_condition)
+
     return buy_signal
 
 # Sell conditions function
@@ -102,16 +115,20 @@ def main():
     data = fetch_data(symbol)
     processed_data, scaler = preprocess_data(data)
     input_shape = (processed_data.shape[1], 1)  # features, 1 time step
+    print("buil model")
     lstm_model = build_lstm_model(input_shape)
     X_train = processed_data[:-1].reshape(-1, processed_data.shape[1], 1)
     y_train = data['Close'].values[1:]
+    print("fit model")
     lstm_model.fit(X_train, y_train, epochs=10, batch_size=32)
 
     in_position = False
     buy_price = 0  # Initialize buy_price to track the price at which we bought
 
     while True:
-        if is_market_open() or True:  # Replace 'True' with actual market open check
+        print("In while loop")
+        #if is_market_open(): 
+        if True:  # Replace 'True' with actual market open check
             latest_data = fetch_data(symbol, lookback_period=60)  # Fetching the last 60 days
             if not latest_data.empty:
                 latest_processed, _ = preprocess_data(latest_data)
@@ -135,7 +152,8 @@ def main():
             else:
                 print("Latest data is empty. Skipping this cycle.")
 
-            sleep(60)  # Wait a minute before the next iteration
+            print("Wait a 10 minuts before the next iteration")
+            sleep(600)  # Wait a minute before the next iteration
         else:
             print("Market closed. Waiting...")
             sleep(300)  # Check every 5 minutes
