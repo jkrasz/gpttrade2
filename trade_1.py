@@ -7,7 +7,7 @@ import pytz
 from time import sleep
 from sklearn.preprocessing import StandardScaler
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten
 import os
 from dotenv import load_dotenv
 from alpha_vantage.timeseries import TimeSeries
@@ -21,7 +21,7 @@ def fetch_current_price(symbol='GPRO'):
 
     ts = TimeSeries(api_key, output_format='pandas')
     data, _ = ts.get_quote_endpoint(symbol)
-    
+
     # Check the new structure - it seems '05. price' is a column, not an index
     print("Processed data structure:", data)
 
@@ -34,7 +34,6 @@ def fetch_current_price(symbol='GPRO'):
 
     return current_price
 
-
 def fetch_data(symbol='GPRO', lookback_period=365):
     load_dotenv()  # Load environment variables
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
@@ -43,7 +42,7 @@ def fetch_data(symbol='GPRO', lookback_period=365):
 
     ts = TimeSeries(api_key, output_format='pandas')
     data, meta_data = ts.get_daily(symbol=symbol, outputsize='full')
-    
+
     # Convert the index to datetime to ensure compatibility with your existing code
     data.index = pd.to_datetime(data.index)
 
@@ -61,14 +60,13 @@ def fetch_data(symbol='GPRO', lookback_period=365):
     # Convert column names to lowercase
     # Explicitly map old column names to new ones
     column_mapping = {
-        '1. open': 'open', 
-        '2. high': 'high', 
-        '3. low': 'low', 
-        '4. close': 'close', 
+        '1. open': 'open',
+        '2. high': 'high',
+        '3. low': 'low',
+        '4. close': 'close',
         '5. volume': 'volume'
     }
     data.rename(columns=column_mapping, inplace=True)
-
 
     if len(data) < 20:
         raise ValueError("Not enough data for technical analysis. Increase lookback period.")
@@ -79,7 +77,6 @@ def fetch_data(symbol='GPRO', lookback_period=365):
 
     return data
 
-
 # Improved market open check function
 def is_market_open():
     ny_time = datetime.now(pytz.timezone('America/New_York'))
@@ -88,11 +85,10 @@ def is_market_open():
 
 # Buy conditions function
 # Enhanced Buy conditions function
-def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long, 
-               threshold_rsi_buy=30, threshold_volume_increase=1.2, 
-               macd_signal_threshold=0, bollinger_band_window=20, 
+def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
+               threshold_rsi_buy=30, threshold_volume_increase=1.2,
+               macd_signal_threshold=0, bollinger_band_window=20,
                bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.03):  # Set a default value
-
 
     # Default to avoid error if not found or not provided
     rsi = current_data.get('momentum_rsi', 100)
@@ -109,14 +105,14 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)
     bollinger_condition = close_price <= bb_lower_band
     ai_condition = predicted_close_price > close_price * price_jump_threshold
-    
+
     buy_signal = volume_condition and ema_condition and rsi_condition and macd_condition and bollinger_condition and ai_condition
     return buy_signal
 
-
 # Sell conditions function
-def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70):
-    current_price = current_data.get('close', 0)
+def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70, current_price=None):
+    # Use provided current price if available, otherwise fall back to the last known close price
+    current_price = current_price if current_price is not None else current_data.get('close', 0)
     rsi = current_data.get('momentum_rsi', 0)
     sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or \
                   current_price >= buy_price * (1 + take_profit_percent) or \
@@ -124,10 +120,11 @@ def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_per
     return sell_signal
 
 # Build LSTM model
-
 def build_lstm_model(input_shape, units=50, dropout_rate=0.2):
     model = Sequential([
-        Bidirectional(LSTM(units, return_sequences=True, input_shape=input_shape)),
+        Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
+        MaxPooling1D(pool_size=2),
+        Bidirectional(LSTM(units, return_sequences=True)),
         Dropout(dropout_rate),
         LSTM(units, return_sequences=True),
         Dropout(dropout_rate),
@@ -143,21 +140,22 @@ def preprocess_data(data):
     scaler = StandardScaler()
     features = [
         'close', 'volume', 'momentum_rsi', 'trend_macd', 'trend_macd_signal',
-        'volatility_bbh', 'volatility_bbl', 'volatility_bbm', 'volatility_bbhi', 'volatility_bbli', 
+        'volatility_bbh', 'volatility_bbl', 'volatility_bbm', 'volatility_bbhi', 'volatility_bbli',
         'volatility_kcc', 'volatility_kch', 'volatility_kcl', 'volatility_dcl', 'volatility_dch',
         'trend_sma_fast', 'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow', 'volatility_atr', 'volume_mfi'
-        ]
+    ]
     # Check if all required features are present
     missing_cols = [col for col in features if col not in data.columns]
     if missing_cols:
         raise ValueError(f"Missing columns in data: {missing_cols}")
 
-    scaled_data = scaler.fit_transform(data[features])
+    scaled_data = scaler.fit_transform(data[features].values)
     return scaled_data, scaler
+
 def main():
     load_dotenv()  # Load environment variables
     symbol = 'GPRO'
-    
+
     last_data_fetch_date = None
     historical_data = None
     processed_data = None
@@ -182,9 +180,9 @@ def main():
 
         print("In while loop")
         current_price = fetch_current_price(symbol)
-        
-        if is_market_open():
-        #if True:
+
+        #if is_market_open():
+        if True:
             if historical_data is not None and not historical_data.empty:
                 latest_processed, _ = preprocess_data(historical_data)
                 latest_scaled = latest_processed[-1].reshape(-1, latest_processed.shape[1], 1)
@@ -208,10 +206,10 @@ def main():
                 print("Historical data is empty. Skipping this cycle.")
 
             print("Wait for the next iteration")
-            sleep(6000)  # Wait a defined time before the next iteration
+            sleep(300)  # Wait a defined time before the next iteration
         else:
             print("Market closed. Waiting...")
-            sleep(3000)  # Check every 5 minutes
+            sleep(300)  # Check every 5 minutes
 
 if __name__ == "__main__":
     main()
