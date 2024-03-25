@@ -1,37 +1,29 @@
 # Import necessary libraries
+
+import ta
+from datetime import datetime, timedelta, date
 import pandas as pd
 import numpy as np
-import ta
-from datetime import datetime, timedelta, time
 import pytz
 from time import sleep
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Bidirectional
 import os
-from dotenv import load_dotenv
 from alpha_vantage.timeseries import TimeSeries
-from tensorflow.keras.layers import Bidirectional
-from datetime import date
+from dotenv import load_dotenv
 
 def fetch_current_price(symbol='GPRO'):
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     if not api_key:
         raise ValueError("Alpha Vantage API key not found.")
-
     ts = TimeSeries(api_key, output_format='pandas')
     data, _ = ts.get_quote_endpoint(symbol)
-
-    # Check the new structure - it seems '05. price' is a column, not an index
-    print("Processed data structure:", data)
-
-    # Data is now expected to be in the columns, not the index
     if '05. price' in data.columns:
-        # The actual price is under the 'Global Quote' column, adjust accordingly
-        current_price = float(data['05. price']['Global Quote'])
+        current_price = float(data['05. price'])
     else:
-        raise ValueError(f"Current price not found in response: {data}")
-
+        raise ValueError("Current price not found in response: {}".format(data))
     return current_price
 
 def fetch_data(symbol='GPRO', lookback_period=365):
@@ -39,48 +31,26 @@ def fetch_data(symbol='GPRO', lookback_period=365):
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     if not api_key:
         raise ValueError("Alpha Vantage API key not found.")
-
     ts = TimeSeries(api_key, output_format='pandas')
-    data, meta_data = ts.get_daily(symbol=symbol, outputsize='full')
-
-    # Convert the index to datetime to ensure compatibility with your existing code
+    data, _ = ts.get_daily(symbol=symbol, outputsize='full')
     data.index = pd.to_datetime(data.index)
-
-    # Filter the data according to the lookback period
     end_date = datetime.now()
     start_date = end_date - timedelta(days=lookback_period)
     data = data[(data.index >= start_date) & (data.index <= end_date)]
-    print(data)
     if data.empty:
         raise ValueError("No data fetched for the symbol with the specified lookback period.")
-
-    data.replace(0, np.nan, inplace=True)  # Replace 0s with NaN to avoid misleading calculations
-    data.dropna(inplace=True)  # Drop rows with NaN values
-
-    # Convert column names to lowercase
-    # Explicitly map old column names to new ones
-    column_mapping = {
-        '1. open': 'open',
-        '2. high': 'high',
-        '3. low': 'low',
-        '4. close': 'close',
-        '5. volume': 'volume'
-    }
+    data.replace(0, np.nan, inplace=True)
+    data.dropna(inplace=True)
+    column_mapping = {'1. open': 'open', '2. high': 'high', '3. low': 'low', '4. close': 'close', '5. volume': 'volume'}
     data.rename(columns=column_mapping, inplace=True)
-
-    if len(data) < 20:
-        raise ValueError("Not enough data for technical analysis. Increase lookback period.")
-
-    # Add technical analysis features with TA-Lib
-    print(data.columns)  # This should print all column names in lowercase
     data = ta.add_all_ta_features(data, "open", "high", "low", "close", "volume", fillna=True)
-
     return data
 
 # Improved market open check function
 def is_market_open():
     ny_time = datetime.now(pytz.timezone('America/New_York'))
-    opening_time, closing_time = pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 9, 30)), pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 16, 0))
+    opening_time = pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 9, 30))
+    closing_time = pytz.timezone('America/New_York').localize(datetime(ny_time.year, ny_time.month, ny_time.day, 16, 0))
     return opening_time <= ny_time <= closing_time and ny_time.weekday() < 5
 
 # Buy conditions function
@@ -88,8 +58,30 @@ def is_market_open():
 def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
                threshold_rsi_buy=30, threshold_volume_increase=1.2,
                macd_signal_threshold=0, bollinger_band_window=20,
-               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.03):  # Set a default value
+               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.03,
+               risk_tolerance=0.05, profit_tolerance=0.10):
+    """
+    Determines if a buy signal should be triggered based on various technical indicators and the predicted close price.
 
+    Args:
+        predicted_close_price (float): The predicted close price from the LSTM model.
+        current_data (dict): A dictionary containing the current technical indicator values.
+        average_volume (float): The average trading volume over a certain period.
+        ema_short (float): The shorter-period Exponential Moving Average.
+        ema_long (float): The longer-period Exponential Moving Average.
+        threshold_rsi_buy (float): The RSI threshold for buy signals (default: 30).
+        threshold_volume_increase (float): The threshold for volume increase (default: 1.2).
+        macd_signal_threshold (float): The MACD signal threshold (default: 0).
+        bollinger_band_window (int): The window size for Bollinger Bands (default: 20).
+        bollinger_band_std_dev (float): The number of standard deviations for Bollinger Bands (default: 2).
+        current_price (float): The current market price (optional).
+        price_jump_threshold (float): The threshold for the predicted price jump (default: 1.03).
+        risk_tolerance (float): The maximum acceptable risk as a fraction of the current price (default: 0.05).
+        profit_tolerance (float): The minimum acceptable profit as a fraction of the current price (default: 0.10).
+
+    Returns:
+        bool: True if a buy signal should be triggered, False otherwise.
+    """
     # Default to avoid error if not found or not provided
     rsi = current_data.get('momentum_rsi', 100)
     macd = current_data.get('trend_macd', 0)
@@ -105,8 +97,12 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     macd_condition = (macd > macd_signal) and (macd > macd_signal_threshold)
     bollinger_condition = close_price <= bb_lower_band
     ai_condition = predicted_close_price > close_price * price_jump_threshold
+    risk_condition = predicted_close_price > close_price * (1 - risk_tolerance)
+    profit_condition = predicted_close_price > close_price * (1 + profit_tolerance)
 
-    buy_signal = volume_condition and ema_condition and rsi_condition and macd_condition and bollinger_condition and ai_condition
+    buy_signal = (volume_condition and ema_condition and rsi_condition and
+                  macd_condition and bollinger_condition and ai_condition and
+                  risk_condition and profit_condition)
     return buy_signal
 
 # Sell conditions function
@@ -119,43 +115,77 @@ def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_per
                   rsi > threshold_rsi_sell
     return sell_signal
 
-# Build LSTM model
-def build_lstm_model(input_shape, units=50, dropout_rate=0.2):
+
+def build_lstm_model(input_shape, units=75, dropout_rate=0.3, attention_units=50):
     model = Sequential([
-        Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=input_shape),
+        Conv1D(filters=64, kernel_size=5, activation='relu', input_shape=input_shape, padding='same'),
         MaxPooling1D(pool_size=2),
         Bidirectional(LSTM(units, return_sequences=True)),
         Dropout(dropout_rate),
-        LSTM(units, return_sequences=True),
+        Conv1D(filters=32, kernel_size=3, activation='relu', padding='same'),
+        MaxPooling1D(pool_size=2),
+        Bidirectional(LSTM(units, return_sequences=True)),
         Dropout(dropout_rate),
-        LSTM(units),
+        Bidirectional(LSTM(units, return_sequences=True)),  # Added an LSTM layer for attention
+        AttentionLayer(attention_units),  # Added attention layer
         Dropout(dropout_rate),
-        Dense(units=1)
+        Bidirectional(LSTM(units)),
+        Dropout(dropout_rate),
+        Dense(units, activation='relu'),
+        Dense(1)
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
     return model
 
+# Attention layer definition
+class AttentionLayer(tf.keras.layers.Layer):
+    def __init__(self, units):
+        super(AttentionLayer, self).__init__()
+        self.W1 = tf.keras.layers.Dense(units)
+        self.W2 = tf.keras.layers.Dense(units)
+        self.V = tf.keras.layers.Dense(1)
+
+    def call(self, inputs):
+        query = self.W1(inputs)
+        values = self.W2(inputs)
+        score = tf.matmul(query, tf.transpose(values, [0, 2, 1]))
+        attention_weights = tf.nn.softmax(score, axis=2)
+        context_vector = tf.matmul(attention_weights, values)
+        return context_vector
+
+
 # Preprocess data for LSTM and strategy use
-def preprocess_data(data):
-    scaler = StandardScaler()
-    features = [
-        'close', 'volume', 'momentum_rsi', 'trend_macd', 'trend_macd_signal',
-        'volatility_bbh', 'volatility_bbl', 'volatility_bbm', 'volatility_bbhi', 'volatility_bbli',
-        'volatility_kcc', 'volatility_kch', 'volatility_kcl', 'volatility_dcl', 'volatility_dch',
-        'trend_sma_fast', 'trend_sma_slow', 'trend_ema_fast', 'trend_ema_slow', 'volatility_atr', 'volume_mfi'
-    ]
-    # Check if all required features are present
-    missing_cols = [col for col in features if col not in data.columns]
+def preprocess_data(data, sequence_length=60):
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("Data needs to be a pandas DataFrame")
+
+    # Ensure all required columns are present
+    required_features = ['close', 'volume', 'momentum_rsi', 'trend_macd', 'trend_macd_signal', 
+                         'volatility_bbh', 'volatility_bbl', 'volatility_bbm', 'volatility_bbhi', 
+                         'volatility_bbli', 'volatility_kcc', 'volatility_kch', 'volatility_kcl', 
+                         'volatility_dcl', 'volatility_dch', 'trend_sma_fast', 'trend_sma_slow', 
+                         'trend_ema_fast', 'trend_ema_slow', 'volatility_atr', 'volume_mfi']
+
+    missing_cols = [col for col in required_features if col not in data.columns]
     if missing_cols:
         raise ValueError(f"Missing columns in data: {missing_cols}")
 
-    scaled_data = scaler.fit_transform(data[features].values)
-    return scaled_data, scaler
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    # Only scale the required features
+    scaled_data = scaler.fit_transform(data[required_features])
+
+    # Generate sequences
+    X, y = [], []
+    for i in range(sequence_length, len(scaled_data)):
+        X.append(scaled_data[i-sequence_length:i])
+        y.append(scaled_data[i, data.columns.get_loc('close')])  # Assuming 'close' is what you're predicting
+
+    return np.array(X), np.array(y), scaler
 
 def main():
     load_dotenv()  # Load environment variables
     symbol = 'GPRO'
-
+    sequence_length = 60 
     last_data_fetch_date = None
     historical_data = None
     processed_data = None
@@ -167,27 +197,32 @@ def main():
     while True:
         today = date.today()
         if last_data_fetch_date is None or last_data_fetch_date != today:
-            print("Fetching new historical data...")
             historical_data = fetch_data(symbol)
-            processed_data, scaler = preprocess_data(historical_data)
-            input_shape = (processed_data.shape[1], 1)  # features, 1 time step
-            lstm_model = build_lstm_model(input_shape)
-            X_train = processed_data[:-1].reshape(-1, processed_data.shape[1], 1)
-            y_train = historical_data['close'].values[1:]
-            print("Fitting model with new data")
-            lstm_model.fit(X_train, y_train, epochs=10, batch_size=32)
-            last_data_fetch_date = today
+            if not historical_data.empty:
+                # Ensure data is in the correct order
+                historical_data = historical_data.iloc[::-1]
+                # We don't use 'processed_data' here directly because we need to split data into sequences
+                X, y, scaler = preprocess_data(historical_data, sequence_length)
+                # Assuming you want to predict 'close' price
+                # Reshape data to fit the LSTM layer
+                input_shape = (X.shape[1], X.shape[2])
+                lstm_model = build_lstm_model(input_shape)
+                print("Fitting model with new data")
+                lstm_model.fit(X, y, epochs=10, batch_size=32)
+                last_data_fetch_date = today
 
         print("In while loop")
-        current_price = fetch_current_price(symbol)
-
+        
         #if is_market_open():
         if True:
+            current_price = fetch_current_price(symbol)
             if historical_data is not None and not historical_data.empty:
-                latest_processed, _ = preprocess_data(historical_data)
-                latest_scaled = latest_processed[-1].reshape(-1, latest_processed.shape[1], 1)
-                predicted_close_price = lstm_model.predict(latest_scaled)[-1, 0]
-
+                latest_processed, _, _ = preprocess_data(historical_data, sequence_length)
+                if latest_processed.shape[0] > 0:  # Check if we have at least one sequence
+                    latest_sequence = latest_processed[-1].reshape(1, sequence_length, -1)
+                    predicted_close_price = lstm_model.predict(latest_sequence)[-1, 0]
+                else:
+                    print("NO DATA no sequence")
                 avg_volume = historical_data['volume'].rolling(window=20).mean().iloc[-1]
                 ema_short = historical_data['close'].ewm(span=12, adjust=False).mean().iloc[-1]
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
@@ -206,10 +241,10 @@ def main():
                 print("Historical data is empty. Skipping this cycle.")
 
             print("Wait for the next iteration")
-            sleep(300)  # Wait a defined time before the next iteration
+            sleep((30 * 60))  # Wait a defined time before the next iteration
         else:
             print("Market closed. Waiting...")
-            sleep(300)  # Check every 5 minutes
+            sleep((30 * 60))  # Check every 5 minutes
 
 if __name__ == "__main__":
     main()
