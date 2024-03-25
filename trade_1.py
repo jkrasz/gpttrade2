@@ -13,6 +13,8 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, 
 import os
 from alpha_vantage.timeseries import TimeSeries
 from dotenv import load_dotenv
+from tensorflow.keras.layers import BatchNormalization, Activation, Attention
+from tensorflow.keras.regularizers import l1_l2
 
 def fetch_current_price(symbol='GPRO'):
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
@@ -60,28 +62,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
                macd_signal_threshold=0, bollinger_band_window=20,
                bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.03,
                risk_tolerance=0.05, profit_tolerance=0.10):
-    """
-    Determines if a buy signal should be triggered based on various technical indicators and the predicted close price.
 
-    Args:
-        predicted_close_price (float): The predicted close price from the LSTM model.
-        current_data (dict): A dictionary containing the current technical indicator values.
-        average_volume (float): The average trading volume over a certain period.
-        ema_short (float): The shorter-period Exponential Moving Average.
-        ema_long (float): The longer-period Exponential Moving Average.
-        threshold_rsi_buy (float): The RSI threshold for buy signals (default: 30).
-        threshold_volume_increase (float): The threshold for volume increase (default: 1.2).
-        macd_signal_threshold (float): The MACD signal threshold (default: 0).
-        bollinger_band_window (int): The window size for Bollinger Bands (default: 20).
-        bollinger_band_std_dev (float): The number of standard deviations for Bollinger Bands (default: 2).
-        current_price (float): The current market price (optional).
-        price_jump_threshold (float): The threshold for the predicted price jump (default: 1.03).
-        risk_tolerance (float): The maximum acceptable risk as a fraction of the current price (default: 0.05).
-        profit_tolerance (float): The minimum acceptable profit as a fraction of the current price (default: 0.10).
-
-    Returns:
-        bool: True if a buy signal should be triggered, False otherwise.
-    """
     # Default to avoid error if not found or not provided
     rsi = current_data.get('momentum_rsi', 100)
     macd = current_data.get('trend_macd', 0)
@@ -115,43 +96,26 @@ def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_per
                   rsi > threshold_rsi_sell
     return sell_signal
 
-
-def build_lstm_model(input_shape, units=75, dropout_rate=0.3, attention_units=50):
+def build_lstm_model(input_shape, units=64, dropout_rate=0.2, l1_reg=0.01, l2_reg=0.01):
     model = Sequential([
-        Conv1D(filters=64, kernel_size=5, activation='relu', input_shape=input_shape, padding='same'),
+        Conv1D(filters=64, kernel_size=5, padding='same', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg), input_shape=input_shape),
+        Activation('relu'),
+        BatchNormalization(),
         MaxPooling1D(pool_size=2),
         Bidirectional(LSTM(units, return_sequences=True)),
         Dropout(dropout_rate),
-        Conv1D(filters=32, kernel_size=3, activation='relu', padding='same'),
+        Conv1D(filters=32, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg)),
+        Activation('relu'),
+        BatchNormalization(),
         MaxPooling1D(pool_size=2),
-        Bidirectional(LSTM(units, return_sequences=True)),
+        Bidirectional(LSTM(units, return_sequences=False)),  # Note: Last LSTM layer should not return sequences
         Dropout(dropout_rate),
-        Bidirectional(LSTM(units, return_sequences=True)),  # Added an LSTM layer for attention
-        AttentionLayer(attention_units),  # Added attention layer
+        Dense(units, activation='relu', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg)),
         Dropout(dropout_rate),
-        Bidirectional(LSTM(units)),
-        Dropout(dropout_rate),
-        Dense(units, activation='relu'),
-        Dense(1)
+        Dense(1)  # Predicting the next closing price
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
     return model
-
-# Attention layer definition
-class AttentionLayer(tf.keras.layers.Layer):
-    def __init__(self, units):
-        super(AttentionLayer, self).__init__()
-        self.W1 = tf.keras.layers.Dense(units)
-        self.W2 = tf.keras.layers.Dense(units)
-        self.V = tf.keras.layers.Dense(1)
-
-    def call(self, inputs):
-        query = self.W1(inputs)
-        values = self.W2(inputs)
-        score = tf.matmul(query, tf.transpose(values, [0, 2, 1]))
-        attention_weights = tf.nn.softmax(score, axis=2)
-        context_vector = tf.matmul(attention_weights, values)
-        return context_vector
 
 
 # Preprocess data for LSTM and strategy use
@@ -213,8 +177,8 @@ def main():
 
         print("In while loop")
         
-        #if is_market_open():
-        if True:
+        if is_market_open():
+        #if True:
             current_price = fetch_current_price(symbol)
             if historical_data is not None and not historical_data.empty:
                 latest_processed, _, _ = preprocess_data(historical_data, sequence_length)
