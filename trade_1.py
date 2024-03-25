@@ -1,5 +1,4 @@
 # Import necessary libraries
-
 import ta
 from datetime import datetime, timedelta, date
 import pandas as pd
@@ -15,6 +14,11 @@ from alpha_vantage.timeseries import TimeSeries
 from dotenv import load_dotenv
 from tensorflow.keras.layers import BatchNormalization, Activation, Attention
 from tensorflow.keras.regularizers import l1_l2
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Bidirectional, BatchNormalization, Activation
+from tensorflow.keras.regularizers import l1_l2
+from tensorflow.keras.optimizers import RMSprop
+import tensorflow as tf
 
 def fetch_current_price(symbol='GPRO'):
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
@@ -96,25 +100,45 @@ def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_per
                   rsi > threshold_rsi_sell
     return sell_signal
 
-def build_lstm_model(input_shape, units=64, dropout_rate=0.2, l1_reg=0.01, l2_reg=0.01):
+# Define a custom simplified self-attention layer for time series
+class SimpleSelfAttention(tf.keras.layers.Layer):
+    def __init__(self, return_sequences=True):
+        super(SimpleSelfAttention, self).__init__()
+        self.return_sequences = return_sequences
+    
+    def build(self, input_shape):
+        self.W = self.add_weight(name='att_weight', shape=(input_shape[-1], input_shape[-1]),
+                                 initializer='uniform', trainable=True)
+        self.b = self.add_weight(name='att_bias', shape=(input_shape[-1],),
+                                 initializer='uniform', trainable=True)
+        super(SimpleSelfAttention, self).build(input_shape)
+
+    def call(self, x):
+        e = tf.nn.tanh(tf.tensordot(x, self.W, axes=1) + self.b)
+        a = tf.nn.softmax(e, axis=1)
+        output = x * a
+        
+        if self.return_sequences:
+            return output
+        
+        return tf.reduce_sum(output, axis=1)
+
+def build_lstm_model(input_shape, units=64, dropout_rate=0.2, attention_units=32, l1_reg=0.01, l2_reg=0.01):
     model = Sequential([
         Conv1D(filters=64, kernel_size=5, padding='same', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg), input_shape=input_shape),
         Activation('relu'),
         BatchNormalization(),
         MaxPooling1D(pool_size=2),
-        Bidirectional(LSTM(units, return_sequences=True)),
+        Bidirectional(LSTM(units, return_sequences=True, activation='tanh')),
         Dropout(dropout_rate),
-        Conv1D(filters=32, kernel_size=3, padding='same', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg)),
-        Activation('relu'),
-        BatchNormalization(),
-        MaxPooling1D(pool_size=2),
-        Bidirectional(LSTM(units, return_sequences=False)),  # Note: Last LSTM layer should not return sequences
+        Bidirectional(LSTM(units, return_sequences=True, activation='elu')),  # Using ELU activation for second LSTM layer
         Dropout(dropout_rate),
+        SimpleSelfAttention(return_sequences=False),  # Applying the custom self-attention mechanism
         Dense(units, activation='relu', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg)),
         Dropout(dropout_rate),
         Dense(1)  # Predicting the next closing price
     ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.compile(optimizer=RMSprop(), loss='mean_squared_error')  # Using RMSprop optimizer
     return model
 
 
