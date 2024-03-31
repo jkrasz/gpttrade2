@@ -21,11 +21,23 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, 
 from tensorflow.keras.regularizers import l1_l2
 from tensorflow.keras.optimizers import RMSprop
 import tensorflow as tf
+
 # Initialization
 load_dotenv()
+logging.basicConfig(filename='stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+data_file = 'historical_data.csv'
+# Ensure the logging directory exists
+os.makedirs('logs', exist_ok=True)
+logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Set API key and symbol
 api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
 symbol = 'GPRO'
-data_file = 'historical_data.csv'
+
+# Ensure logging directory exists
+os.makedirs('logs', exist_ok=True)
+logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 def fetch_current_price(symbol='GPRO'):
   
@@ -146,7 +158,6 @@ def build_lstm_model(input_shape, units=64, dropout_rate=0.2, attention_units=32
     model.compile(optimizer=RMSprop(), loss='mean_squared_error')  # Using RMSprop optimizer
     return model
 
-
 # Preprocess data for LSTM and strategy use
 def preprocess_data(data, sequence_length=60):
     if not isinstance(data, pd.DataFrame):
@@ -205,11 +216,7 @@ def load_data():
     return pd.DataFrame(columns=['Date', 'Predicted', 'Actual'])
 
 def main():
-    logging.basicConfig(filename='stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    data_file = 'historical_data.csv'
-    # Ensure the logging directory exists
-    os.makedirs('logs', exist_ok=True)
-    logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    
     sequence_length = 60 
     last_data_fetch_date = None
     historical_data = None
@@ -238,8 +245,8 @@ def main():
                 lstm_model.fit(X, y, epochs=10, batch_size=32)
                 last_data_fetch_date = today
         
-        #if is_market_open():
-        if True: #for debuging while market is closed 
+        if is_market_open():
+        #if True: #for debuging while market is closed 
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
