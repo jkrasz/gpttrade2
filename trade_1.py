@@ -10,6 +10,8 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Bidirectional
 import os
+import logging
+import matplotlib.pyplot as plt
 from alpha_vantage.timeseries import TimeSeries
 from dotenv import load_dotenv
 from tensorflow.keras.layers import BatchNormalization, Activation, Attention
@@ -19,9 +21,14 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, 
 from tensorflow.keras.regularizers import l1_l2
 from tensorflow.keras.optimizers import RMSprop
 import tensorflow as tf
+# Initialization
+load_dotenv()
+api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+symbol = 'GPRO'
+data_file = 'historical_data.csv'
 
 def fetch_current_price(symbol='GPRO'):
-    api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+  
     if not api_key:
         raise ValueError("Alpha Vantage API key not found.")
     ts = TimeSeries(api_key, output_format='pandas')
@@ -33,8 +40,6 @@ def fetch_current_price(symbol='GPRO'):
     return current_price
 
 def fetch_data(symbol='GPRO', lookback_period=365):
-    load_dotenv()  # Load environment variables
-    api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     if not api_key:
         raise ValueError("Alpha Vantage API key not found.")
     ts = TimeSeries(api_key, output_format='pandas')
@@ -170,9 +175,41 @@ def preprocess_data(data, sequence_length=60):
 
     return np.array(X), np.array(y), scaler
 
+def visualize_data():
+    """Visualize the historical and current session's predicted vs. actual prices."""
+    df = load_data()
+    plt.figure(figsize=(12, 6))
+    plt.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
+    plt.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.title(f'Stock Price Prediction vs Actual for {symbol}')
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def save_data(predicted, actual):
+    """Append the predicted and actual prices to a CSV file for persistence."""
+    df = pd.DataFrame({'Date': [datetime.now().strftime('%Y-%m-%d')], 'Predicted': [predicted], 'Actual': [actual]})
+    if os.path.exists(data_file):
+        df.to_csv(data_file, mode='a', header=False, index=False)
+    else:
+        df.to_csv(data_file, mode='w', header=True, index=False)
+
+def load_data():
+    """Load historical data from a CSV file."""
+    if os.path.exists(data_file):
+        return pd.read_csv(data_file)
+    return pd.DataFrame(columns=['Date', 'Predicted', 'Actual'])
+
 def main():
-    load_dotenv()  # Load environment variables
-    symbol = 'GPRO'
+    logging.basicConfig(filename='stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    data_file = 'historical_data.csv'
+    # Ensure the logging directory exists
+    os.makedirs('logs', exist_ok=True)
+    logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     sequence_length = 60 
     last_data_fetch_date = None
     historical_data = None
@@ -181,6 +218,8 @@ def main():
     lstm_model = None
     in_position = False
     buy_price = 0  # Initialize buy_price to track the price at which we bought
+    predicted_prices = []
+    actual_prices = []
 
     while True:
         today = date.today()
@@ -198,17 +237,21 @@ def main():
                 print("Fitting model with new data")
                 lstm_model.fit(X, y, epochs=10, batch_size=32)
                 last_data_fetch_date = today
-
-        print("In while loop")
         
-        if is_market_open():
-        #if True:
+        #if is_market_open():
+        if True: #for debuging while market is closed 
             current_price = fetch_current_price(symbol)
+            actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
                 latest_processed, _, _ = preprocess_data(historical_data, sequence_length)
                 if latest_processed.shape[0] > 0:  # Check if we have at least one sequence
                     latest_sequence = latest_processed[-1].reshape(1, sequence_length, -1)
                     predicted_close_price = lstm_model.predict(latest_sequence)[-1, 0]
+                    current_price = fetch_current_price()
+                    save_data(predicted_close_price, current_price)
+                    predicted_prices.append(predicted_close_price)
+                    logging.info(f"Predicted price for {today.strftime('%Y-%m-%d')}: {predicted_close_price}, Actual: {current_price}")
+
                 else:
                     print("NO DATA no sequence")
                 avg_volume = historical_data['volume'].rolling(window=20).mean().iloc[-1]
@@ -231,6 +274,10 @@ def main():
             print("Wait for the next iteration")
             sleep((30 * 60))  # Wait a defined time before the next iteration
         else:
+            if today != last_data_fetch_date:
+                logging.info("Market closed. Processing after-market tasks.")
+                if len(predicted_prices) > 1 and len(actual_prices) > 1:
+                    visualize_predictions(actual_prices, predicted_prices)            
             print("Market closed. Waiting...")
             sleep((30 * 60))  # Check every 5 minutes
 
