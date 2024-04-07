@@ -104,13 +104,9 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     buy_signal = (volume_condition and ema_condition and rsi_condition and
                   macd_condition and bollinger_condition and ai_condition and
                   risk_condition and profit_condition)
-    print(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition}
-                  macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} 
-                  risk_condition {risk_condition} profit_condition {profit_condition}")
+    print(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition} macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} risk_condition {risk_condition} profit_condition {profit_condition}")
+    logging.info(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition} macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} risk_condition {risk_condition} profit_condition {profit_condition}")
 
-    logging.info(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition}
-                  macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} 
-                  risk_condition {risk_condition} profit_condition {profit_condition}")
     return buy_signal
 
 # Sell conditions function
@@ -192,19 +188,27 @@ def preprocess_data(data, sequence_length=60):
 
     return np.array(X), np.array(y), scaler
 
-def visualize_data():
+def visualize_data(is_initialized=False):
     """Visualize the historical and current session's predicted vs. actual prices."""
     df = pd.read_csv(data_file)
-    plt.figure(figsize=(12, 6))
-    plt.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
-    plt.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.title(f'Stock Price Prediction vs Actual for {symbol}')
+    if not is_initialized:
+        plt.ion()  # Turn on interactive mode
+        fig, ax = plt.subplots(figsize=(12, 6))
+    else:
+        plt.clf()  # Clear the current figure
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+    ax.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
+    ax.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Price')
+    ax.set_title(f'Stock Price Prediction vs Actual for {symbol}')
     plt.xticks(rotation=45)
-    plt.legend()
+    ax.legend()
     plt.tight_layout()
-    plt.show()
+    plt.draw()
+    plt.pause(0.1)  # Allows the plot to update without blocking
+
 
 def save_data(predicted, actual):
     """Append the predicted and actual prices to a CSV file for persistence."""
@@ -254,6 +258,8 @@ def predict_price(model, data, scaler, sequence_length=60):
 
 
 def main():
+    plt.ion()  # Enable interactive mode for plot updates
+    is_initialized = False
     sequence_length = 60
     last_data_fetch_date = None
     historical_data = None
@@ -278,7 +284,8 @@ def main():
                 lstm_model.fit(X, y, epochs=20, batch_size=32)  # Increase the number of epochs
                 last_data_fetch_date = today
                 if len(predicted_prices) > 1 and len(actual_prices) > 1:
-                    visualize_data()
+                    visualize_data( is_initialized)
+                    is_initialized = True  # The plot is now initialized
 
         # if is_market_open():
         if True:  # for debugging while market is closed
