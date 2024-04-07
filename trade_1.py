@@ -104,14 +104,13 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     buy_signal = (volume_condition and ema_condition and rsi_condition and
                   macd_condition and bollinger_condition and ai_condition and
                   risk_condition and profit_condition)
-    print("volume_condition " + str(volume_condition) + " ema_condition " + str(ema_condition) + 
-          " rsi_condition " + str(rsi_condition) + " macd_condition " + str(macd_condition)  + 
-          " bollinger_condition " + str(bollinger_condition)  +" ai_condition " + str(ai_condition) + 
-          " risk_condition " + str(risk_condition) + " profit_condition " + str(profit_condition))
-    logging.info("volume_condition " + str(volume_condition) + " ema_condition " + str(ema_condition) + 
-          " rsi_condition " + str(rsi_condition) + " macd_condition " + str(macd_condition)  + 
-          " bollinger_condition " + str(bollinger_condition)  +" ai_condition " + str(ai_condition) + 
-          " risk_condition " + str(risk_condition) + " profit_condition " + str(profit_condition))
+    print(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition}
+                  macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} 
+                  risk_condition {risk_condition} profit_condition {profit_condition}")
+
+    logging.info(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition}
+                  macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} 
+                  risk_condition {risk_condition} profit_condition {profit_condition}")
     return buy_signal
 
 # Sell conditions function
@@ -193,12 +192,12 @@ def preprocess_data(data, sequence_length=60):
 
     return np.array(X), np.array(y), scaler
 
-def visualize_data(actual_prices, predicted_prices):
+def visualize_data():
     """Visualize the historical and current session's predicted vs. actual prices."""
-    df = load_data()
+    df = pd.read_csv(data_file)
     plt.figure(figsize=(12, 6))
-    plt.plot(df['Date'], predicted_prices, label='Predicted Price', color='red')
-    plt.plot(df['Date'], actual_prices, label='Actual Price', color='blue')
+    plt.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
+    plt.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
     plt.xlabel('Date')
     plt.ylabel('Price')
     plt.title(f'Stock Price Prediction vs Actual for {symbol}')
@@ -206,7 +205,6 @@ def visualize_data(actual_prices, predicted_prices):
     plt.legend()
     plt.tight_layout()
     plt.show()
-
 
 def save_data(predicted, actual):
     """Append the predicted and actual prices to a CSV file for persistence."""
@@ -266,7 +264,7 @@ def main():
     buy_price = 0  # Initialize buy_price to track the price at which we bought
     predicted_prices = []
     actual_prices = []
-
+    visualize_data()
     while True:
         today = date.today()
         if last_data_fetch_date is None or last_data_fetch_date != today:
@@ -279,6 +277,8 @@ def main():
                 print("Fitting model with new data")
                 lstm_model.fit(X, y, epochs=20, batch_size=32)  # Increase the number of epochs
                 last_data_fetch_date = today
+                if len(predicted_prices) > 1 and len(actual_prices) > 1:
+                    visualize_data()
 
         # if is_market_open():
         if True:  # for debugging while market is closed
@@ -318,8 +318,7 @@ def main():
         else:
             if today != last_data_fetch_date:
                 logging.info("Market closed. Processing after-market tasks.")
-                if len(predicted_prices) > 1 and len(actual_prices) > 1:
-                    visualize_data(actual_prices, predicted_prices)
+                
             print("Market closed. Waiting...")
             sleep((60 * 60))  # Check every 5 minutes
 
