@@ -38,7 +38,6 @@ symbol = 'GPRO'
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 def fetch_current_price(symbol='GPRO'):
   
     if not api_key:
@@ -105,6 +104,14 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     buy_signal = (volume_condition and ema_condition and rsi_condition and
                   macd_condition and bollinger_condition and ai_condition and
                   risk_condition and profit_condition)
+    print("volume_condition " + str(volume_condition) + " ema_condition " + str(ema_condition) + 
+          " rsi_condition " + str(rsi_condition) + " macd_condition " + str(macd_condition)  + 
+          " bollinger_condition " + str(bollinger_condition)  +" ai_condition " + str(ai_condition) + 
+          " risk_condition " + str(risk_condition) + " profit_condition " + str(profit_condition))
+    logging.info("volume_condition " + str(volume_condition) + " ema_condition " + str(ema_condition) + 
+          " rsi_condition " + str(rsi_condition) + " macd_condition " + str(macd_condition)  + 
+          " bollinger_condition " + str(bollinger_condition)  +" ai_condition " + str(ai_condition) + 
+          " risk_condition " + str(risk_condition) + " profit_condition " + str(profit_condition))
     return buy_signal
 
 # Sell conditions function
@@ -186,12 +193,12 @@ def preprocess_data(data, sequence_length=60):
 
     return np.array(X), np.array(y), scaler
 
-def visualize_data():
+def visualize_data(actual_prices, predicted_prices):
     """Visualize the historical and current session's predicted vs. actual prices."""
     df = load_data()
     plt.figure(figsize=(12, 6))
-    plt.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
-    plt.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
+    plt.plot(df['Date'], predicted_prices, label='Predicted Price', color='red')
+    plt.plot(df['Date'], actual_prices, label='Actual Price', color='blue')
     plt.xlabel('Date')
     plt.ylabel('Price')
     plt.title(f'Stock Price Prediction vs Actual for {symbol}')
@@ -215,9 +222,41 @@ def load_data():
         return pd.read_csv(data_file)
     return pd.DataFrame(columns=['Date', 'Predicted', 'Actual'])
 
-def main():
+def preprocess_data(data, sequence_length=60):
+    """
+    Preprocess the data
+    """
+    # Selecting the 'close' prices only
+    close_prices = data['close'].values.reshape(-1, 1)
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(close_prices)
+
+    X, y = [], []
+    for i in range(sequence_length, len(scaled_data)):
+        X.append(scaled_data[i-sequence_length:i, 0])
+        y.append(scaled_data[i, 0])
+    X, y = np.array(X), np.array(y)
+    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+
+    return X, y, scaler
+
+def predict_price(model, data, scaler, sequence_length=60):
+    """
+    Make a prediction for the next closing price.
+    """
+    # Ensure the last sequence is a 2D array as expected by scaler
+    last_sequence = data[-sequence_length:].reshape(-1, 1)  # Reshaping to 2D array
+    last_sequence_scaled = scaler.transform(last_sequence)
+    last_sequence_scaled = np.reshape(last_sequence_scaled, (1, sequence_length, 1))
+    predicted_scaled = model.predict(last_sequence_scaled)
+    predicted_price = scaler.inverse_transform(predicted_scaled.reshape(-1, 1))[0, 0]
     
-    sequence_length = 60 
+    return predicted_price
+
+
+
+def main():
+    sequence_length = 60
     last_data_fetch_date = None
     historical_data = None
     processed_data = None
@@ -233,27 +272,23 @@ def main():
         if last_data_fetch_date is None or last_data_fetch_date != today:
             historical_data = fetch_data(symbol)
             if not historical_data.empty:
-                # Ensure data is in the correct order
                 historical_data = historical_data.iloc[::-1]
-                # We don't use 'processed_data' here directly because we need to split data into sequences
                 X, y, scaler = preprocess_data(historical_data, sequence_length)
-                # Assuming you want to predict 'close' price
-                # Reshape data to fit the LSTM layer
                 input_shape = (X.shape[1], X.shape[2])
                 lstm_model = build_lstm_model(input_shape)
                 print("Fitting model with new data")
-                lstm_model.fit(X, y, epochs=10, batch_size=32)
+                lstm_model.fit(X, y, epochs=20, batch_size=32)  # Increase the number of epochs
                 last_data_fetch_date = today
-        
-        if is_market_open():
-        #if True: #for debuging while market is closed 
+
+        # if is_market_open():
+        if True:  # for debugging while market is closed
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
                 latest_processed, _, _ = preprocess_data(historical_data, sequence_length)
                 if latest_processed.shape[0] > 0:  # Check if we have at least one sequence
                     latest_sequence = latest_processed[-1].reshape(1, sequence_length, -1)
-                    predicted_close_price = lstm_model.predict(latest_sequence)[-1, 0]
+                    predicted_close_price = predict_price(lstm_model, historical_data['close'].values, scaler, sequence_length)
                     current_price = fetch_current_price()
                     save_data(predicted_close_price, current_price)
                     predicted_prices.append(predicted_close_price)
@@ -266,11 +301,11 @@ def main():
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
                 # Use current price and historical data to decide whether to buy or sell
-                if not in_position and should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2, current_price=current_price):
+                if not in_position and should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2, current_price=current_price, price_jump_threshold=1.05, risk_tolerance=0.03, profit_tolerance=0.12):  # Adjust the price_jump_threshold, risk_tolerance, and profit_tolerance
                     in_position = True
                     buy_price = current_price
                     print(f"Buy at {buy_price}")
-                elif in_position and should_sell(historical_data.iloc[-1].to_dict(), buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70, current_price=current_price):
+                elif in_position and should_sell(historical_data.iloc[-1].to_dict(), buy_price, stop_loss_percent=0.08, take_profit_percent=0.18, threshold_rsi_sell=70, current_price=current_price):  # Adjust the stop_loss_percent and take_profit_percent
                     in_position = False
                     sell_price = current_price
                     print(f"Sell at {sell_price}")
@@ -279,14 +314,14 @@ def main():
                 print("Historical data is empty. Skipping this cycle.")
 
             print("Wait for the next iteration")
-            sleep((30 * 60))  # Wait a defined time before the next iteration
+            sleep((60 * 60))  # Wait a defined time before the next iteration
         else:
             if today != last_data_fetch_date:
                 logging.info("Market closed. Processing after-market tasks.")
                 if len(predicted_prices) > 1 and len(actual_prices) > 1:
-                    visualize_predictions(actual_prices, predicted_prices)            
+                    visualize_data(actual_prices, predicted_prices)
             print("Market closed. Waiting...")
-            sleep((30 * 60))  # Check every 5 minutes
+            sleep((60 * 60))  # Check every 5 minutes
 
 if __name__ == "__main__":
     main()
