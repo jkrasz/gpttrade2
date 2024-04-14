@@ -21,11 +21,15 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, 
 from tensorflow.keras.regularizers import l1_l2
 from tensorflow.keras.optimizers import RMSprop
 import tensorflow as tf
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Initialization
 load_dotenv()
 logging.basicConfig(filename='stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 data_file = 'historical_data.csv'
+conditions_file = 'conditions_data.csv'
 # Ensure the logging directory exists
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,17 +42,27 @@ symbol = 'GPRO'
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(filename='logs/stock_predictions.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def send_email(subject, content):
+    sender_email = 'chatGptTrade@gmail.com'
+    sender_password = 'bymwlvzzmbzxeeas'  # In a real scenario, use a secure method to store and access credentials
+    receiver_email = 'john.kraszewski@gmail.com'
+    smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
+    smtp_server.starttls()
+    smtp_server.login(sender_email, sender_password)
+    message = f"""Subject: {subject}\n\n{content}"""
+    print(message)
+    try:
+        smtp_server.sendmail(sender_email, receiver_email, message)
+    except Exception as e:
+        print("Error sending email: ", e)
+    smtp_server.quit()
+
 def fetch_current_price(symbol='GPRO'):
-  
-    if not api_key:
-        raise ValueError("Alpha Vantage API key not found.")
     ts = TimeSeries(api_key, output_format='pandas')
     data, _ = ts.get_quote_endpoint(symbol)
     if '05. price' in data.columns:
-        current_price = float(data['05. price'])
-    else:
-        raise ValueError("Current price not found in response: {}".format(data))
-    return current_price
+        return float(data['05. price'].iloc[0])  # Updated to avoid FutureWarning
+    raise ValueError("Current price not found in response.")
 
 def fetch_data(symbol='GPRO', lookback_period=365):
     if not api_key:
@@ -101,13 +115,21 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     risk_condition = predicted_close_price > close_price * (1 - risk_tolerance)
     profit_condition = predicted_close_price > close_price * (1 + profit_tolerance)
 
-    buy_signal = (volume_condition and ema_condition and rsi_condition and
-                  macd_condition and bollinger_condition and ai_condition and
-                  risk_condition and profit_condition)
-    print(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition} macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} risk_condition {risk_condition} profit_condition {profit_condition}")
-    logging.info(f"volume_condition {volume_condition} ema_condition {ema_condition} rsi_condition {rsi_condition} macd_condition {macd_condition} bollinger_condition {bollinger_condition} ai_condition {ai_condition} risk_condition {risk_condition} profit_condition {profit_condition}")
+    condition_values = [
+        volume_condition,
+        ema_condition,
+        rsi_condition,
+        macd_condition,
+        bollinger_condition,
+        ai_condition,
+        risk_condition,
+        profit_condition
+    ]
 
-    return buy_signal
+    buy_signal = all(condition_values)
+    logging.info(f"Condition values: {condition_values}")
+
+    return buy_signal, condition_values
 
 # Sell conditions function
 def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70, current_price=None):
@@ -190,24 +212,30 @@ def preprocess_data(data, sequence_length=60):
 
 def visualize_data(is_initialized=False):
     """Visualize the historical and current session's predicted vs. actual prices."""
-    df = pd.read_csv(data_file)
-    if not is_initialized:
-        plt.ion()  # Turn on interactive mode
-        fig, ax = plt.subplots(figsize=(12, 6))
-    else:
-        plt.clf()  # Clear the current figure
-        fig, ax = plt.subplots(figsize=(12, 6))
+    if os.path.exists(data_file):
+        df = pd.read_csv(data_file)
+        if 'Date' in df.columns and 'Predicted' in df.columns and 'Actual' in df.columns:
+            if not is_initialized:
+                plt.ion()  # Turn on interactive mode
+                fig, ax = plt.subplots(figsize=(12, 6))
+            else:
+                plt.clf()  # Clear the current figure
+                fig, ax = plt.subplots(figsize=(12, 6))
 
-    ax.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
-    ax.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Price')
-    ax.set_title(f'Stock Price Prediction vs Actual for {symbol}')
-    plt.xticks(rotation=45)
-    ax.legend()
-    plt.tight_layout()
-    plt.draw()
-    plt.pause(0.1)  # Allows the plot to update without blocking
+            ax.plot(df['Date'], df['Predicted'], label='Predicted Price', color='red')
+            ax.plot(df['Date'], df['Actual'], label='Actual Price', color='blue')
+            ax.set_xlabel('Date')
+            ax.set_ylabel('Price')
+            ax.set_title(f'Stock Price Prediction vs Actual for {symbol}')
+            plt.xticks(rotation=45)
+            ax.legend()
+            plt.tight_layout()
+            plt.draw()
+            plt.pause(0.1)  # Allows the plot to update without blocking
+        else:
+            print("Required columns not found in the data file.")
+    else:
+        print("Data file not found.")
 
 
 def save_data(predicted, actual):
@@ -255,6 +283,31 @@ def predict_price(model, data, scaler, sequence_length=60):
     
     return predicted_price
 
+def visualize_conditions(conditions_history):
+    condition_labels = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'AI', 'Risk', 'Profit']
+
+    if os.path.exists(conditions_file):
+        # Load existing conditions data from file
+        existing_df = pd.read_csv(conditions_file)
+    else:
+        existing_df = pd.DataFrame(columns=condition_labels)
+
+    # Convert the current session's conditions history into a DataFrame
+    conditions_df = pd.DataFrame(conditions_history, columns=condition_labels).astype(int)
+
+    # Append the new conditions to the existing DataFrame
+    updated_df = pd.concat([existing_df, conditions_df], ignore_index=True)
+
+    # Save the updated DataFrame back to the file
+    updated_df.to_csv(conditions_file, index=False)
+
+    # Now plot the updated DataFrame
+    plt.clf()  # Clear the current figure
+    updated_df.plot(subplots=True, layout=(4, 2), figsize=(15, 10), marker='o', title='Buy Signal Conditions Over Time')
+    plt.tight_layout()
+    plt.draw()
+    plt.pause(0.1)  # Allows the plot to update without blocking
+
 
 
 def main():
@@ -271,8 +324,14 @@ def main():
     predicted_prices = []
     actual_prices = []
     visualize_data()
+    if os.path.exists(conditions_file):
+        conditions_history = pd.read_csv(conditions_file).values.tolist()
+    else:
+        conditions_history = []
+        
     while True:
         today = date.today()
+        
         if last_data_fetch_date is None or last_data_fetch_date != today:
             historical_data = fetch_data(symbol)
             if not historical_data.empty:
@@ -287,8 +346,7 @@ def main():
                     visualize_data( is_initialized)
                     is_initialized = True  # The plot is now initialized
 
-        # if is_market_open():
-        if True:  # for debugging while market is closed
+        if is_market_open() or True:  # True is for testing without real-time market data
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
@@ -307,11 +365,16 @@ def main():
                 ema_short = historical_data['close'].ewm(span=12, adjust=False).mean().iloc[-1]
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
+                buy_signal, conditions = should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2, current_price=current_price, price_jump_threshold=1.05, risk_tolerance=0.03, profit_tolerance=0.12)
+                conditions_history.append([int(val) for val in conditions]) 
+                visualize_conditions(conditions_history)
+
                 # Use current price and historical data to decide whether to buy or sell
-                if not in_position and should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, threshold_rsi_buy=30, threshold_volume_increase=1.2, macd_signal_threshold=0, bollinger_band_window=20, bollinger_band_std_dev=2, current_price=current_price, price_jump_threshold=1.05, risk_tolerance=0.03, profit_tolerance=0.12):  # Adjust the price_jump_threshold, risk_tolerance, and profit_tolerance
+                if not in_position and buy_signal:
                     in_position = True
                     buy_price = current_price
                     print(f"Buy at {buy_price}")
+                    send_email("Buy Signal", f"Buy at price {buy_price}")
                 elif in_position and should_sell(historical_data.iloc[-1].to_dict(), buy_price, stop_loss_percent=0.08, take_profit_percent=0.18, threshold_rsi_sell=70, current_price=current_price):  # Adjust the stop_loss_percent and take_profit_percent
                     in_position = False
                     sell_price = current_price
