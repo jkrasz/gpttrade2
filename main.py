@@ -3,7 +3,7 @@ from time import sleep
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import logging
+from logger_config import setup_logging
 from data_manager import fetch_data, fetch_current_price
 from trading_model import build_lstm_model, predict_price
 from visualization import visualize_data, visualize_conditions
@@ -14,7 +14,7 @@ from data_manager import fetch_data, fetch_current_price, preprocess_data, is_ma
 
 def main():
     plt.ion()  # Enable interactive mode for plot updates
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = setup_logging()
     is_initialized = False
     sequence_length = 60
     last_data_fetch_date = None
@@ -52,7 +52,7 @@ def main():
                     visualize_data(is_initialized)
                     is_initialized = True  # The plot is now initialized
 
-        if is_market_open() or True:  # True is for testing without real-time market data
+        if is_market_open() #or True:  # True is for testing without real-time market data
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
@@ -63,7 +63,7 @@ def main():
                     current_price = fetch_current_price(symbol)
                     save_data(predicted_close_price, current_price)
                     predicted_prices.append(predicted_close_price)
-                    logging.info(f"Predicted price for {today.strftime('%Y-%m-%d')}: {predicted_close_price}, Actual: {current_price}")
+                    logger.info(f"Predicted price for {today.strftime('%Y-%m-%d')}: {predicted_close_price}, Actual: {current_price}")
 
                 avg_volume = historical_data['volume'].rolling(window=20).mean().iloc[-1]
                 ema_short = historical_data['close'].ewm(span=12, adjust=False).mean().iloc[-1]
@@ -91,7 +91,7 @@ def main():
             sleep(60 * 60)  # Wait a defined time before the next iteration
         else:
             if today != last_data_fetch_date:
-                logging.info("Market closed. Processing after-market tasks.")
+                logger.info("Market closed. Processing after-market tasks.")
             print("Market closed. Waiting...")
             sleep(60 * 60)  # Check every hour
 

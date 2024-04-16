@@ -33,6 +33,7 @@ def visualize_data(is_initialized=False):
         print("Data file not found.")
 
 
+
 def visualize_conditions(conditions_history):
     condition_labels = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'AI', 'Risk', 'Profit']
 
@@ -51,11 +52,20 @@ def visualize_conditions(conditions_history):
     # Save the updated DataFrame back to the file
     updated_df.to_csv(CONDITIONS_FILE, index=False)
 
-    # Now plot the updated DataFrame
+    # Now plot the updated DataFrame on a single plot
     plt.clf()  # Clear the current figure
-    updated_df.plot(subplots=True, layout=(4, 2), figsize=(15, 10), marker='o', title='Buy Signal Conditions Over Time')
+    ax = plt.gca()  # Get current axis
+
+    # Plot each condition with a unique color
+    colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray']
+    for i, label in enumerate(condition_labels):
+        ax.plot(updated_df.index, updated_df[label], label=label, color=colors[i % len(colors)], marker='o')
+
+    plt.title('Buy Signal Conditions Over Time')
+    plt.xlabel('Index')
+    plt.ylabel('Condition Value')
+    plt.legend()
     plt.tight_layout()
     plt.draw()
     plt.pause(0.1)  # Allows the plot to update without blocking
     plt.show(block=False)
-

@@ -1,5 +1,6 @@
-import logging
+from logger_config import setup_logging
 import numpy as np
+logger = setup_logging()
 
 def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
                threshold_rsi_buy=30, threshold_volume_increase=1.2,
@@ -37,7 +38,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     ]
 
     buy_signal = all(condition_values)
-    logging.info(f"Condition values: {condition_values}")
+    logger.info(f"Condition values: {condition_values}")
 
     return buy_signal, condition_values
 

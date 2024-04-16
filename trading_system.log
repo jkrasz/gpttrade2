@@ -1,0 +1,8 @@
+2024-04-15 18:08:24,263 - TradingLogger - INFO - Predicted price for 2024-04-15: 2.3544416427612305, Actual: 1.76
+2024-04-15 18:08:24,263 - TradingLogger - INFO - Predicted price for 2024-04-15: 2.3544416427612305, Actual: 1.76
+2024-04-15 18:08:24,264 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-15 18:08:24,264 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-15 18:12:07,149 - TradingLogger - INFO - Predicted price for 2024-04-15: 2.951364278793335, Actual: 1.76
+2024-04-15 18:12:07,149 - TradingLogger - INFO - Predicted price for 2024-04-15: 2.951364278793335, Actual: 1.76
+2024-04-15 18:12:07,152 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-15 18:12:07,152 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
