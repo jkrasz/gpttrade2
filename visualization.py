@@ -1,13 +1,11 @@
-import matplotlib
-matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
+import pandas as pd
 import os
-import pandas as pd  # Ensure pandas is also imported if it's used
-from config import DATA_FILE, symbol ,CONDITIONS_FILE # Import symbol if used for the plot title
+from config import DATA_FILE, CONDITIONS_FILE, symbol
 
 def visualize_data(is_initialized=False):
     """Visualize the historical and current session's predicted vs. actual prices."""
-    if os.path.exists(DATA_FILE):  # Correct variable name used here
+    if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
         if 'Date' in df.columns and 'Predicted' in df.columns and 'Actual' in df.columns:
             if not is_initialized:
@@ -27,44 +25,38 @@ def visualize_data(is_initialized=False):
             plt.tight_layout()
             plt.draw()
             plt.pause(0.1)  # Allows the plot to update without blocking
+            plt.show(block=False)
         else:
             print("Required columns not found in the data file.")
     else:
         print("Data file not found.")
 
-
-
 def visualize_conditions(conditions_history):
-    condition_labels = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'AI', 'Risk', 'Profit']
-
+    """Plot all conditions on a single plot for clarity and ease of analysis."""
+    condition_labels = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'AI', 'Risk', 'Profit', 'Date']
     if os.path.exists(CONDITIONS_FILE):
-        # Load existing conditions data from file
-        existing_df = pd.read_csv(CONDITIONS_FILE)
+        conditions_df = pd.read_csv(CONDITIONS_FILE)
     else:
-        existing_df = pd.DataFrame(columns=condition_labels)
+        conditions_df = pd.DataFrame(columns=condition_labels)
 
     # Convert the current session's conditions history into a DataFrame
-    conditions_df = pd.DataFrame(conditions_history, columns=condition_labels).astype(int)
+    new_conditions_df = pd.DataFrame(conditions_history, columns=condition_labels)
+    # Adjust the format here to match the date format you are appending
+    new_conditions_df['Date'] = pd.to_datetime(new_conditions_df['Date'], format='%Y-%m-%d')
 
-    # Append the new conditions to the existing DataFrame
-    updated_df = pd.concat([existing_df, conditions_df], ignore_index=True)
+    updated_df = pd.concat([conditions_df, new_conditions_df], ignore_index=True)
+    updated_df.to_csv(CONDITIONS_FILE, index=False)  # Save the updated DataFrame back to the file
 
-    # Save the updated DataFrame back to the file
-    updated_df.to_csv(CONDITIONS_FILE, index=False)
-
-    # Now plot the updated DataFrame on a single plot
     plt.clf()  # Clear the current figure
     ax = plt.gca()  # Get current axis
-
-    # Plot each condition with a unique color
     colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray']
-    for i, label in enumerate(condition_labels):
-        ax.plot(updated_df.index, updated_df[label], label=label, color=colors[i % len(colors)], marker='o')
+    for i, label in enumerate(condition_labels[:-1]):  # Exclude the 'Date' column
+        ax.plot(updated_df['Date'], updated_df[label], label=label, color=colors[i % len(colors)], marker='o')
 
-    plt.title('Buy Signal Conditions Over Time')
-    plt.xlabel('Index')
+    plt.title('Trading Conditions Over Time')
+    plt.xlabel('Date')
     plt.ylabel('Condition Value')
-    plt.legend()
+    plt.legend(loc='upper left')
     plt.tight_layout()
     plt.draw()
     plt.pause(0.1)  # Allows the plot to update without blocking

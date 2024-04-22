@@ -52,7 +52,7 @@ def main():
                     visualize_data(is_initialized)
                     is_initialized = True  # The plot is now initialized
 
-        if is_market_open() #or True:  # True is for testing without real-time market data
+        if is_market_open() or True:  # True is for testing without real-time market data
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
@@ -70,7 +70,7 @@ def main():
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
                 buy_signal, conditions = should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, current_price=current_price)
-                conditions_history.append([int(val) for val in conditions]) 
+                conditions_history.append([int(val) for val in conditions] + [today.strftime('%Y-%m-%d')])
                 visualize_conditions(conditions_history)
 
                 if not in_position and buy_signal:
