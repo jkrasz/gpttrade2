@@ -43,3 +43,23 @@
 2024-04-21 20:36:22,582 - TradingLogger - INFO - Predicted price for 2024-04-21: 3.1266186237335205, Actual: 1.7
 2024-04-21 20:36:22,583 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
 2024-04-21 20:36:22,583 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-22 06:42:54,692 - TradingLogger - INFO - Predicted price for 2024-04-22: 2.665283679962158, Actual: 1.7
+2024-04-22 06:42:54,692 - TradingLogger - INFO - Predicted price for 2024-04-22: 2.665283679962158, Actual: 1.7
+2024-04-22 06:42:54,695 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-22 06:42:54,695 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:11:11,434 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.732880115509033, Actual: 1.69
+2024-04-23 06:11:11,434 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.732880115509033, Actual: 1.69
+2024-04-23 06:11:11,438 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:11:11,438 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:12:29,164 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.9222769737243652, Actual: 1.69
+2024-04-23 06:12:29,164 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.9222769737243652, Actual: 1.69
+2024-04-23 06:12:29,166 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:12:29,166 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:16:47,752 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.5174570083618164, Actual: 1.69
+2024-04-23 06:16:47,752 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.5174570083618164, Actual: 1.69
+2024-04-23 06:16:47,754 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:16:47,754 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:19:43,323 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.2991390228271484, Actual: 1.69
+2024-04-23 06:19:43,323 - TradingLogger - INFO - Predicted price for 2024-04-23: 2.2991390228271484, Actual: 1.69
+2024-04-23 06:19:43,326 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]
+2024-04-23 06:19:43,326 - TradingLogger - INFO - Condition values: [False, False, False, False, True, True, True, True]

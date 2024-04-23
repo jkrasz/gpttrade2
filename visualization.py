@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
@@ -35,20 +37,22 @@ def visualize_conditions(conditions_history):
     """Plot all conditions on a single plot for clarity and ease of analysis."""
     condition_labels = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'AI', 'Risk', 'Profit', 'Date']
     if os.path.exists(CONDITIONS_FILE):
-        conditions_df = pd.read_csv(CONDITIONS_FILE)
+        conditions_df = pd.read_csv(CONDITIONS_FILE, parse_dates=['Date'])
     else:
         conditions_df = pd.DataFrame(columns=condition_labels)
 
     # Convert the current session's conditions history into a DataFrame
     new_conditions_df = pd.DataFrame(conditions_history, columns=condition_labels)
-    # Adjust the format here to match the date format you are appending
-    new_conditions_df['Date'] = pd.to_datetime(new_conditions_df['Date'], format='%Y-%m-%d')
+    #new_conditions_df['Date'] = pd.to_datetime(new_conditions_df['Date'], format='%Y-%m-%d %H:%M:%S')
+    new_conditions_df['Date'] = pd.to_datetime(new_conditions_df['Date'], format='%Y-%m-%d', errors='coerce')
+
 
     updated_df = pd.concat([conditions_df, new_conditions_df], ignore_index=True)
     updated_df.to_csv(CONDITIONS_FILE, index=False)  # Save the updated DataFrame back to the file
 
     plt.clf()  # Clear the current figure
     ax = plt.gca()  # Get current axis
+    ax.xaxis_date()  # Ensure that x-axis treats data as dates
     colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray']
     for i, label in enumerate(condition_labels[:-1]):  # Exclude the 'Date' column
         ax.plot(updated_df['Date'], updated_df[label], label=label, color=colors[i % len(colors)], marker='o')
