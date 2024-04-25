@@ -5,6 +5,7 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Conv1D, MaxPooling1D, 
 from tensorflow.keras.regularizers import l1_l2
 from tensorflow.keras.optimizers import RMSprop
 
+
 def build_lstm_model(input_shape, units=64, dropout_rate=0.2, attention_units=32, l1_reg=0.01, l2_reg=0.01):
     model = Sequential([
         Conv1D(filters=64, kernel_size=5, padding='same', kernel_regularizer=l1_l2(l1=l1_reg, l2=l2_reg), input_shape=input_shape),
@@ -15,8 +16,7 @@ def build_lstm_model(input_shape, units=64, dropout_rate=0.2, attention_units=32
         Dropout(dropout_rate),
         Bidirectional(LSTM(units, return_sequences=True)),
         Dropout(dropout_rate),
-        Dense(units, activation='relu'),
-        Dropout(dropout_rate),
+        Dense(attention_units, activation='relu'),
         Dense(1)
     ])
     model.compile(optimizer=RMSprop(), loss='mean_squared_error')

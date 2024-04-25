@@ -70,7 +70,11 @@ def main():
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
 
                 buy_signal, conditions = should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, current_price=current_price)
-                conditions_history.append([int(val) for val in conditions] + [today.strftime('%Y-%m-%d')])
+                conditions_history.append([
+                conditions['volume_condition'], conditions['ema_condition'], conditions['rsi_condition'],
+                conditions['macd_condition'], conditions['bollinger_condition'], conditions['ai_condition'],
+                conditions['risk_condition'], conditions['profit_condition'], today.strftime('%Y-%m-%d')])
+
                 visualize_conditions(conditions_history)
 
                 if not in_position and buy_signal:
