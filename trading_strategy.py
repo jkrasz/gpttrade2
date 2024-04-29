@@ -1,6 +1,7 @@
 from logger_config import setup_logging
 import numpy as np
 logger = setup_logging()
+from datetime import datetime
 
 def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
                threshold_rsi_buy=30, threshold_volume_increase=1.2,
@@ -23,25 +24,28 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     stochastic_k = current_data.get('momentum_stoch_k', 100)
 
     # Condition checks
-    conditions = {
-        "volume_condition": volume > average_volume * threshold_volume_increase,
-        "ema_condition": ema_short > ema_long,
-        "rsi_condition": rsi < threshold_rsi_buy,
-        "macd_condition": (macd > macd_signal) and (macd > macd_signal_threshold),
-        "bollinger_condition": close_price <= bb_lower_band,
-        "adx_condition": adx > adx_threshold,
-        "stochastic_condition": stochastic_k < stochastic_k_threshold,
-        "ai_condition": predicted_close_price > close_price * price_jump_threshold,
-        "risk_condition": predicted_close_price > close_price * (1 - risk_tolerance),
-        "profit_condition": predicted_close_price > close_price * (1 + profit_tolerance)
-    }
+    current_date = datetime.now()
+    condition_values = [
+        volume > average_volume * threshold_volume_increase,
+        ema_short > ema_long,
+        rsi < threshold_rsi_buy,
+        (macd > macd_signal) and (macd > macd_signal_threshold),
+        close_price <= bb_lower_band,
+        adx > adx_threshold,
+        stochastic_k < stochastic_k_threshold,
+        predicted_close_price > close_price * price_jump_threshold,
+        predicted_close_price > close_price * (1 - risk_tolerance),
+        predicted_close_price > close_price * (1 + profit_tolerance),
+        current_date
+    ]
+
 
     # Evaluate the buy signal
-    buy_signal = all(conditions.values())
-    logger.info("Trading conditions checked: %s", conditions)
+    buy_signal = all(condition_values)
+    logger.info("Trading conditions checked: %s", condition_values)
     logger.info("Buy signal: %s", buy_signal)
 
-    return buy_signal, conditions
+    return buy_signal, condition_values
 
 
 # Sell conditions function
