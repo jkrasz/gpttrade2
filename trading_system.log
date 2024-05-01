@@ -1,42 +1,48 @@
-2024-04-28 09:22:35,599 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True]
-2024-04-28 09:22:35,600 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:38:07,615 - TradingLogger - INFO - Predicted price for 2024-04-28: 2.8774518966674805, Actual: 1.73
-2024-04-28 09:38:07,615 - TradingLogger - INFO - Predicted price for 2024-04-28: 2.8774518966674805, Actual: 1.73
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True]
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True]
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True]
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:38:07,617 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:42:28,443 - TradingLogger - INFO - Predicted price for 2024-04-28: 0.5904080867767334, Actual: 1.73
-2024-04-28 09:42:28,443 - TradingLogger - INFO - Predicted price for 2024-04-28: 0.5904080867767334, Actual: 1.73
-2024-04-28 09:42:28,444 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 4, 28, 9, 42, 28, 444903)]
-2024-04-28 09:42:28,444 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 4, 28, 9, 42, 28, 444903)]
-2024-04-28 09:42:28,444 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 4, 28, 9, 42, 28, 444903)]
-2024-04-28 09:42:28,445 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:42:28,445 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:42:28,445 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:46:44,122 - TradingLogger - INFO - Predicted price for 2024-04-28: 1.84064781665802, Actual: 1.73
-2024-04-28 09:46:44,122 - TradingLogger - INFO - Predicted price for 2024-04-28: 1.84064781665802, Actual: 1.73
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, False, datetime.datetime(2024, 4, 28, 9, 46, 44, 124187)]
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, False, datetime.datetime(2024, 4, 28, 9, 46, 44, 124187)]
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, False, datetime.datetime(2024, 4, 28, 9, 46, 44, 124187)]
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:46:44,124 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:55:23,109 - TradingLogger - INFO - Predicted price for 2024-04-28: 2.6090407371520996, Actual: 1.73
-2024-04-28 09:55:23,109 - TradingLogger - INFO - Predicted price for 2024-04-28: 2.6090407371520996, Actual: 1.73
-2024-04-28 09:55:23,110 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 28, 9, 55, 23, 110866)]
-2024-04-28 09:55:23,110 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 28, 9, 55, 23, 110866)]
-2024-04-28 09:55:23,110 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 28, 9, 55, 23, 110866)]
-2024-04-28 09:55:23,111 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:55:23,111 - TradingLogger - INFO - Buy signal: False
-2024-04-28 09:55:23,111 - TradingLogger - INFO - Buy signal: False
-2024-04-29 06:41:18,602 - TradingLogger - INFO - Predicted price for 2024-04-29: 2.3059239387512207, Actual: 1.73
-2024-04-29 06:41:18,602 - TradingLogger - INFO - Predicted price for 2024-04-29: 2.3059239387512207, Actual: 1.73
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 29, 6, 41, 18, 606946)]
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 29, 6, 41, 18, 606946)]
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 4, 29, 6, 41, 18, 606946)]
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Buy signal: False
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Buy signal: False
-2024-04-29 06:41:18,607 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:03:11,404 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.4848284721374512, Actual: 1.73
+2024-05-01 06:03:11,404 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.4848284721374512, Actual: 1.73
+2024-05-01 06:03:11,406 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 3, 11, 406798)]
+2024-05-01 06:03:11,406 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 3, 11, 406798)]
+2024-05-01 06:03:11,406 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 3, 11, 406798)]
+2024-05-01 06:03:11,407 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:03:11,407 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:03:11,407 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:05:19,855 - TradingLogger - INFO - Predicted price for 2024-05-01: 2.641047239303589, Actual: 1.73
+2024-05-01 06:05:19,855 - TradingLogger - INFO - Predicted price for 2024-05-01: 2.641047239303589, Actual: 1.73
+2024-05-01 06:05:19,857 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 5, 19, 857679)]
+2024-05-01 06:05:19,857 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 5, 19, 857679)]
+2024-05-01 06:05:19,857 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 5, 19, 857679)]
+2024-05-01 06:05:19,858 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:05:19,858 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:05:19,858 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:11:44,223 - TradingLogger - INFO - Predicted price for 2024-05-01: 2.5147013664245605, Actual: 1.73
+2024-05-01 06:11:44,223 - TradingLogger - INFO - Predicted price for 2024-05-01: 2.5147013664245605, Actual: 1.73
+2024-05-01 06:11:44,225 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 11, 44, 225711)]
+2024-05-01 06:11:44,225 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 11, 44, 225711)]
+2024-05-01 06:11:44,225 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, True, True, True, datetime.datetime(2024, 5, 1, 6, 11, 44, 225711)]
+2024-05-01 06:11:44,226 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:11:44,226 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:11:44,226 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:15:18,035 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.5019800662994385, Actual: 1.73
+2024-05-01 06:15:18,035 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.5019800662994385, Actual: 1.73
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 15, 18, 37464)]
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 15, 18, 37464)]
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Trading conditions checked: [False, False, False, False, True, False, False, False, False, False, datetime.datetime(2024, 5, 1, 6, 15, 18, 37464)]
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:15:18,037 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:24:12,577 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.7875704765319824, Actual: 1.73
+2024-05-01 06:24:12,577 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.7875704765319824, Actual: 1.73
+2024-05-01 06:24:12,579 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': False, 'Date': '2024-05-01 06:24:12'}
+2024-05-01 06:24:12,579 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': False, 'Date': '2024-05-01 06:24:12'}
+2024-05-01 06:24:12,579 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': False, 'Date': '2024-05-01 06:24:12'}
+2024-05-01 06:24:12,580 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:24:12,580 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:24:12,580 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:30:53,167 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.0739738941192627, Actual: 1.73
+2024-05-01 06:30:53,167 - TradingLogger - INFO - Predicted price for 2024-05-01: 1.0739738941192627, Actual: 1.73
+2024-05-01 06:30:53,169 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': False, 'Profit': False, 'Date': '2024-05-01 06:30:53'}
+2024-05-01 06:30:53,169 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': False, 'Profit': False, 'Date': '2024-05-01 06:30:53'}
+2024-05-01 06:30:53,169 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': False, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': False, 'Profit': False, 'Date': '2024-05-01 06:30:53'}
+2024-05-01 06:30:53,170 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:30:53,170 - TradingLogger - INFO - Buy signal: False
+2024-05-01 06:30:53,170 - TradingLogger - INFO - Buy signal: False

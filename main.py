@@ -76,7 +76,7 @@ def main():
                 ema_long = historical_data['close'].ewm(span=26, adjust=False).mean().iloc[-1]
                 buy_signal, condition_values = should_buy(predicted_close_price, historical_data.iloc[-1].to_dict(), avg_volume, ema_short, ema_long, current_price=current_price)
         
-                conditions_history.append(condition_values + [today.strftime('%Y-%m-%d')])
+                conditions_history.append(condition_values)
 
                 visualize_conditions(conditions_history)
 

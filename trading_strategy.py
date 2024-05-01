@@ -22,30 +22,29 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     bb_lower_band = current_data.get('volatility_bbl', np.inf)
     adx = current_data.get('trend_adx', 0)
     stochastic_k = current_data.get('momentum_stoch_k', 100)
+    current_date = datetime.now()
 
     # Condition checks
-    current_date = datetime.now()
-    condition_values = [
-        volume > average_volume * threshold_volume_increase,
-        ema_short > ema_long,
-        rsi < threshold_rsi_buy,
-        (macd > macd_signal) and (macd > macd_signal_threshold),
-        close_price <= bb_lower_band,
-        adx > adx_threshold,
-        stochastic_k < stochastic_k_threshold,
-        predicted_close_price > close_price * price_jump_threshold,
-        predicted_close_price > close_price * (1 - risk_tolerance),
-        predicted_close_price > close_price * (1 + profit_tolerance),
-        current_date
-    ]
+    condition_dict = {
+        'Volume': volume > average_volume * threshold_volume_increase,
+        'EMA': ema_short > ema_long,
+        'RSI': rsi < threshold_rsi_buy,
+        'MACD': (macd > macd_signal) and (macd > macd_signal_threshold),
+        'Bollinger': close_price <= bb_lower_band,
+        'ADX': adx > adx_threshold,
+        'Stochastic K': stochastic_k < stochastic_k_threshold,
+        'AI': False,  # Placeholder for AI, adjust as necessary
+        'Risk': predicted_close_price > close_price * (1 - risk_tolerance),
+        'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
+        'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')  # Format for consistency
+    }
 
+    buy_signal = all(condition_dict.values())
 
-    # Evaluate the buy signal
-    buy_signal = all(condition_values)
-    logger.info("Trading conditions checked: %s", condition_values)
+    logger.info("Trading conditions checked: %s", condition_dict)
     logger.info("Buy signal: %s", buy_signal)
 
-    return buy_signal, condition_values
+    return buy_signal, condition_dict 
 
 
 # Sell conditions function

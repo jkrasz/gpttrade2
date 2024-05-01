@@ -34,40 +34,34 @@ def visualize_data(is_initialized=False):
     else:
         print("Data file not found.")
 
+
 def visualize_conditions(conditions_history):
     """Plot all conditions on a single plot for clarity and ease of analysis."""
-    plt.clf()  # Clear the current figure
-
-    condition_labels = [
-        'Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'ADX', 'Stochastic K',
-        'AI', 'Risk', 'Profit', 'Date','Extra Column'
-    ]
+    plt.clf()
 
     if os.path.exists(CONDITIONS_FILE):
         existing_df = pd.read_csv(CONDITIONS_FILE)
         existing_df['Date'] = pd.to_datetime(existing_df['Date'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
     else:
-        existing_df = pd.DataFrame(columns=condition_labels)
-        existing_df['Date'] = pd.to_datetime([], errors='coerce')  # Create empty list of NaT values
+        existing_df = pd.DataFrame()
 
-    new_conditions_df = pd.DataFrame(conditions_history, columns=condition_labels)
+    # Assume conditions_history is a list of dictionaries
+    new_conditions_df = pd.DataFrame(conditions_history)
     
     updated_df = pd.concat([existing_df, new_conditions_df], ignore_index=True)
-    updated_df.to_csv(CONDITIONS_FILE, index=False)  # Save the updated DataFrame back to the file
+    updated_df = updated_df.drop_duplicates(subset='Date', keep='last')
+    updated_df.to_csv(CONDITIONS_FILE, index=False)
 
-    ax = plt.gca()  # Get current axis
-
+    ax = plt.gca()
     colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray', 'black', 'cyan']
-   
-    for i, label in enumerate(condition_labels[:-1]):  # Exclude the 'Date' column
-        ax.plot(updated_df['Date'].dt.strftime('%Y-%m-%d'), updated_df[label].astype(str), label=label, color=colors[i % len(colors)], marker='o')
-    ax.plot(updated_df['Date'].dt.strftime('%Y-%m-%d'), updated_df['Date'].dt.strftime('%Y-%m-%d'), label='Date', color='black', marker='o')  # Add the Date plot
+    for label in new_conditions_df.columns[:-1]:  # Skip 'Date' column for looping
+        if label in updated_df.columns:
+            ax.plot(updated_df['Date'], updated_df[label], label=label, color=colors[int(updated_df.columns.get_loc(label) % len(colors))], marker='o')
 
     plt.title('Trading Conditions Over Time')
     plt.xlabel('Date')
     plt.ylabel('Condition Value')
     plt.legend(loc='upper left')
     plt.tight_layout()
-    plt.figure(2)  # Create a new figure for the data plot
     plt.show(block=False)
     plt.pause(0.1)
