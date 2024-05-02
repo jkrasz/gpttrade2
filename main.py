@@ -13,9 +13,7 @@ from config import symbol, DATA_FILE, CONDITIONS_FILE
 from data_manager import fetch_data, fetch_current_price, preprocess_data, is_market_open,save_data, load_data
 
 def main():
-    plt.ion()  # Enable interactive mode for plot updates
     logger = setup_logging()
-    is_initialized = False
     sequence_length = 60
     last_data_fetch_date = None
     historical_data = None
@@ -30,7 +28,7 @@ def main():
     predicted_prices = []
     actual_prices = []
 
-    visualize_data(is_initialized)
+    visualize_data()
 
     # Initialize conditions history from file if it exists
     if os.path.exists(CONDITIONS_FILE):
@@ -44,19 +42,17 @@ def main():
         if last_data_fetch_date is None or last_data_fetch_date != today:
             historical_data = fetch_data(symbol)
             if not historical_data.empty:
-                historical_data = historical_data.iloc[::-1]
-                X, y, scaler = preprocess_data(historical_data, sequence_length)
+                X, y, scaler = preprocess_data(historical_data, 60)  # Assuming a sequence length of 60
                 input_shape = (X.shape[1], X.shape[2])
                 lstm_model = build_lstm_model(input_shape)
-                gru_model = build_gru_model(input_shape)  # Create GRU model
-                cnn_model = build_cnn_model(input_shape)  # Create CNN mode
-                transformer_model = build_transformer_model(input_shape)  # Create Transformer model
-                print("Fitting model with new data")
-                lstm_model.fit(X, y, epochs=20, batch_size=32)  # Increase the number of epochs
+                gru_model = build_lstm_model(input_shape)  # Placeholder for actual GRU model building
+                cnn_model = build_lstm_model(input_shape)  # Placeholder for actual CNN model building
+                transformer_model = build_lstm_model(input_shape)  # Placeholder for actual Transformer model building
+                lstm_model.fit(X, y, epochs=20, batch_size=32)
                 last_data_fetch_date = today
+
                 if len(predicted_prices) > 1 and len(actual_prices) > 1:
-                    visualize_data(is_initialized)
-                    is_initialized = True  # The plot is now initialized
+                    visualize_data()
 
         if is_market_open():# or True:  # True is for testing without real-time market data
             current_price = fetch_current_price(symbol)
@@ -67,8 +63,8 @@ def main():
                     latest_sequence = latest_processed[-1].reshape(1, sequence_length, -1)
                     predicted_close_price = predict_price(lstm_model, gru_model, cnn_model, transformer_model, historical_data['close'].values, scaler, sequence_length)
                     current_price = fetch_current_price(symbol)
-                    save_data(predicted_close_price, current_price)
                     predicted_prices.append(predicted_close_price)
+                    save_data(predicted_close_price, current_price)
                     logger.info(f"Predicted price for {today.strftime('%Y-%m-%d')}: {predicted_close_price}, Actual: {current_price}")
 
                 avg_volume = historical_data['volume'].rolling(window=20).mean().iloc[-1]
