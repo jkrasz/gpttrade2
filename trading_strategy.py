@@ -1,18 +1,17 @@
+
 from logger_config import setup_logging
 import numpy as np
-logger = setup_logging()
 from datetime import datetime
 
-def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
-               threshold_rsi_buy=30, threshold_volume_increase=1.2,
-               macd_signal_threshold=0, bollinger_band_window=20,
-               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.03,
-               risk_tolerance=0.05, profit_tolerance=0.10,
-               adx_threshold=25, stochastic_k_threshold=20):
-    
-    # Initialize logging
-    logger = setup_logging()
+logger = setup_logging()
 
+def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
+               threshold_rsi_buy=35, threshold_volume_increase=1.1,
+               macd_signal_threshold=0, bollinger_band_window=20,
+               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.02,
+               risk_tolerance=0.1, profit_tolerance=0.15,
+               adx_threshold=20, stochastic_k_threshold=30):
+    
     # Extract metrics from current_data with defaults
     rsi = current_data.get('momentum_rsi', 100)
     macd = current_data.get('trend_macd', 0)
@@ -33,7 +32,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
         'Bollinger': close_price <= bb_lower_band,
         'ADX': adx > adx_threshold,
         'Stochastic K': stochastic_k < stochastic_k_threshold,
-        'AI': False,  # Placeholder for AI, adjust as necessary
+        'AI': predicted_close_price > close_price,  # Placeholder for AI, adjust as necessary
         'Risk': predicted_close_price > close_price * (1 - risk_tolerance),
         'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
         'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')  # Format for consistency
@@ -46,13 +45,9 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
 
     return buy_signal, condition_dict 
 
-
-# Sell conditions function
-def should_sell(current_data, buy_price, stop_loss_percent=0.10, take_profit_percent=0.15, threshold_rsi_sell=70, current_price=None):
+def should_sell(current_data, buy_price, stop_loss_percent=0.07, take_profit_percent=0.20, threshold_rsi_sell=65, current_price=None):
     # Use provided current price if available, otherwise fall back to the last known close price
     current_price = current_price if current_price is not None else current_data.get('close', 0)
     rsi = current_data.get('momentum_rsi', 0)
-    sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or \
-                  current_price >= buy_price * (1 + take_profit_percent) or \
-                  rsi > threshold_rsi_sell
+    sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or                   current_price >= buy_price * (1 + take_profit_percent) or                   rsi > threshold_rsi_sell
     return sell_signal

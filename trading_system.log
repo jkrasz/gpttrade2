@@ -1,5 +1,14 @@
-2024-05-01 20:34:01,807 - TradingLogger - INFO - Predicted price for 2024-05-01: 2.0230140686035156, Actual: 1.86
-2024-05-01 20:34:01,809 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': True, 'RSI': False, 'MACD': True, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': False, 'Date': '2024-05-01 20:34:01'}
-2024-05-01 20:34:01,809 - TradingLogger - INFO - Trading conditions checked: {'Volume': False, 'EMA': True, 'RSI': False, 'MACD': True, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': False, 'Date': '2024-05-01 20:34:01'}
-2024-05-01 20:34:01,810 - TradingLogger - INFO - Buy signal: False
-2024-05-01 20:34:01,810 - TradingLogger - INFO - Buy signal: False
+2024-05-26 11:45:24,293 - TradingLogger - INFO - Predicted price for 2024-05-26: 1.811591625213623, Actual: 1.54
+2024-05-26 11:45:24,293 - TradingLogger - INFO - Predicted price for 2024-05-26: 1.811591625213623, Actual: 1.54
+2024-05-26 11:45:24,295 - TradingLogger - INFO - Trading conditions checked: {'Volume': True, 'EMA': True, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': True, 'Date': '2024-05-26 11:45:24'}
+2024-05-26 11:45:24,295 - TradingLogger - INFO - Trading conditions checked: {'Volume': True, 'EMA': True, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': True, 'Date': '2024-05-26 11:45:24'}
+2024-05-26 11:45:24,295 - TradingLogger - INFO - Trading conditions checked: {'Volume': True, 'EMA': True, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': False, 'Risk': True, 'Profit': True, 'Date': '2024-05-26 11:45:24'}
+2024-05-26 11:45:24,296 - TradingLogger - INFO - Buy signal: False
+2024-05-26 11:45:24,296 - TradingLogger - INFO - Buy signal: False
+2024-05-26 11:45:24,296 - TradingLogger - INFO - Buy signal: False
+2024-05-26 12:17:25,898 - TradingLogger - INFO - Predicted price for 2024-05-26: 3.2602031230926514, Actual: 1.54
+2024-05-26 12:17:25,898 - TradingLogger - INFO - Predicted price for 2024-05-26: 3.2602031230926514, Actual: 1.54
+2024-05-26 12:17:25,900 - TradingLogger - INFO - Trading conditions checked: {'Volume': True, 'EMA': True, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': True, 'Risk': True, 'Profit': True, 'Date': '2024-05-26 12:17:25'}
+2024-05-26 12:17:25,900 - TradingLogger - INFO - Trading conditions checked: {'Volume': True, 'EMA': True, 'RSI': False, 'MACD': False, 'Bollinger': True, 'ADX': False, 'Stochastic K': False, 'AI': True, 'Risk': True, 'Profit': True, 'Date': '2024-05-26 12:17:25'}
+2024-05-26 12:17:25,901 - TradingLogger - INFO - Buy signal: False
+2024-05-26 12:17:25,901 - TradingLogger - INFO - Buy signal: False
