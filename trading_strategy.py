@@ -1,4 +1,3 @@
-
 from logger_config import setup_logging
 import numpy as np
 from datetime import datetime
@@ -35,6 +34,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
         'AI': predicted_close_price > close_price,  # Placeholder for AI, adjust as necessary
         'Risk': predicted_close_price > close_price * (1 - risk_tolerance),
         'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
+        'Price Jump': predicted_close_price > close_price * price_jump_threshold,
         'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')  # Format for consistency
     }
 
@@ -49,5 +49,7 @@ def should_sell(current_data, buy_price, stop_loss_percent=0.07, take_profit_per
     # Use provided current price if available, otherwise fall back to the last known close price
     current_price = current_price if current_price is not None else current_data.get('close', 0)
     rsi = current_data.get('momentum_rsi', 0)
-    sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or                   current_price >= buy_price * (1 + take_profit_percent) or                   rsi > threshold_rsi_sell
+    sell_signal = current_price <= buy_price * (1 - stop_loss_percent) or \
+                  current_price >= buy_price * (1 + take_profit_percent) or \
+                  rsi > threshold_rsi_sell
     return sell_signal

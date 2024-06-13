@@ -1,9 +1,8 @@
-
-
 import pandas as pd
 import os
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
+import plotly.io as pio
 from config import CONDITIONS_FILE, DATA_FILE, symbol
 import json
 
@@ -11,7 +10,6 @@ global fig_conditions
 fig_conditions = None
 global fig_data
 fig_data = None
-
 
 def visualize_data():
     """Visualize the historical and current session's predicted vs. actual prices with Plotly, updating the plot with new data."""
@@ -32,7 +30,7 @@ def visualize_data():
                 fig_data.data[0].y = df['Predicted']
                 fig_data.data[1].x = df['Date']
                 fig_data.data[1].y = df['Actual']
-            fig_data.show()
+            pio.show(fig_data, auto_open=False)
         else:
             print("Required columns not found in the data file.")
     else:
@@ -75,4 +73,4 @@ def visualize_conditions(condition_values):
             trace.x = updated_df['Date']
             trace.y = updated_df[trace.name]
 
-    fig_conditions.show()
+    pio.show(fig_conditions, auto_open=False)
