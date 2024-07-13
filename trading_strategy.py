@@ -5,11 +5,12 @@ from datetime import datetime
 logger = setup_logging()
 
 def should_buy(predicted_close_price, current_data, average_volume, ema_short, ema_long,
-               threshold_rsi_buy=35, threshold_volume_increase=1.1,
+               threshold_rsi_buy=40, threshold_volume_increase=1.2,
                macd_signal_threshold=0, bollinger_band_window=20,
-               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.02,
-               risk_tolerance=0.1, profit_tolerance=0.15,
-               adx_threshold=20, stochastic_k_threshold=30):
+               bollinger_band_std_dev=2, current_price=None, price_jump_threshold=1.05,
+               risk_tolerance=0.15, profit_tolerance=0.25,
+               adx_threshold=25, stochastic_k_threshold=20,
+               sma_50=None, sma_200=None, rsi=None):
     
     # Extract metrics from current_data with defaults
     rsi = current_data.get('momentum_rsi', 100)
@@ -20,25 +21,28 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     bb_lower_band = current_data.get('volatility_bbl', np.inf)
     adx = current_data.get('trend_adx', 0)
     stochastic_k = current_data.get('momentum_stoch_k', 100)
+    golden_cross = sma_50 > sma_200 if sma_50 and sma_200 else False
+    rsi_condition = 30 <= rsi <= 70 if rsi is not None else False
     current_date = datetime.now()
 
     # Condition checks
     condition_dict = {
         'Volume': volume > average_volume * threshold_volume_increase,
         'EMA': ema_short > ema_long,
-        'RSI': rsi < threshold_rsi_buy,
+        'RSI': rsi_condition,
         'MACD': (macd > macd_signal) and (macd > macd_signal_threshold),
         'Bollinger': close_price <= bb_lower_band,
         'ADX': adx > adx_threshold,
         'Stochastic K': stochastic_k < stochastic_k_threshold,
-        'AI': predicted_close_price > close_price,  # Placeholder for AI, adjust as necessary
+        'AI': predicted_close_price > close_price * 1.1,  # Increase AI prediction threshold
         'Risk': predicted_close_price > close_price * (1 - risk_tolerance),
         'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
         'Price Jump': predicted_close_price > close_price * price_jump_threshold,
-        'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')  # Format for consistency
+        'Golden Cross': golden_cross,
+        'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')
     }
 
-    buy_signal = all(condition_dict.values())
+    buy_signal = sum(condition_dict.values()) >= 10
 
     logger.info("Trading conditions checked: %s", condition_dict)
     logger.info("Buy signal: %s", buy_signal)

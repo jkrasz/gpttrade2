@@ -13,5 +13,6 @@ EMAIL_PASS = 'bymwlvzzmbzxeeas'
 RECEIVER_EMAIL = 'john.kraszewski@gmail.com'
 symbol = 'GPRO'
 
-# Ensure the logging directory exists
+# Ensure the logging directory exists   
 os.makedirs('logs', exist_ok=True)
+

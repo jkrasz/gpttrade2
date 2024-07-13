@@ -55,23 +55,49 @@ def visualize_conditions(condition_values):
     updated_df = updated_df.drop_duplicates(subset='Date', keep='last')
     updated_df.to_csv(CONDITIONS_FILE, index=False)
 
-    colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray', 'black', 'cyan']
+    colors = ['red', 'green', 'blue', 'orange', 'purple', 'brown', 'pink', 'gray', 'black', 'cyan', 
+              'magenta', 'lime', 'teal', 'lavender', 'yellow', 'salmon']
+
+    boolean_columns = ['Volume', 'EMA', 'RSI', 'MACD', 'Bollinger', 'ADX', 'Stochastic K', 'AI', 'Risk', 'Profit', 'Price Jump', 'Golden Cross']
+    numeric_columns = [col for col in updated_df.columns if col not in boolean_columns + ['Date']]
 
     if fig_conditions is None:
-        fig_conditions = make_subplots(rows=1, cols=1)
-        for i, label in enumerate(new_conditions_df.columns[:-1]):  # Skip 'Date' column for looping
+        fig_conditions = make_subplots(rows=2, cols=1, subplot_titles=('Boolean Conditions', 'Numeric Conditions'),
+                                       vertical_spacing=0.1, row_heights=[0.7, 0.3])
+        
+        # Plot boolean conditions
+        for i, label in enumerate(boolean_columns):
             if label in updated_df.columns:
                 fig_conditions.add_trace(go.Scatter(x=updated_df['Date'], y=updated_df[label], mode='lines+markers',
                                                     name=label, line=dict(color=colors[i % len(colors)])), row=1, col=1)
+        
+        # Plot numeric conditions
+        for i, label in enumerate(numeric_columns):
+            if label in updated_df.columns:
+                fig_conditions.add_trace(go.Scatter(x=updated_df['Date'], y=updated_df[label], mode='lines+markers',
+                                                    name=label, line=dict(color=colors[(i + len(boolean_columns)) % len(colors)])), row=2, col=1)
 
         fig_conditions.update_layout(title='Trading Conditions Over Time',
                                      xaxis_title='Date',
                                      yaxis_title='Condition Value',
                                      legend_title="Conditions",
-                                     legend=dict(x=0.01, y=0.99, bordercolor="Black", borderwidth=1))
+                                     legend=dict(x=0.01, y=0.99, bordercolor="Black", borderwidth=1),
+                                     height=800)  # Increase height to accommodate two subplots
+        
+        fig_conditions.update_yaxes(title_text="Boolean Value", row=1, col=1)
+        fig_conditions.update_yaxes(title_text="Numeric Value", row=2, col=1)
+
     else:
-        for i, trace in enumerate(fig_conditions.data):
-            trace.x = updated_df['Date']
-            trace.y = updated_df[trace.name]
+        # Update boolean conditions
+        for i, label in enumerate(boolean_columns):
+            if label in updated_df.columns:
+                fig_conditions.data[i].x = updated_df['Date']
+                fig_conditions.data[i].y = updated_df[label]
+        
+        # Update numeric conditions
+        for i, label in enumerate(numeric_columns):
+            if label in updated_df.columns:
+                fig_conditions.data[i + len(boolean_columns)].x = updated_df['Date']
+                fig_conditions.data[i + len(boolean_columns)].y = updated_df[label]
 
     fig_conditions.show(config={'displayModeBar': False})
