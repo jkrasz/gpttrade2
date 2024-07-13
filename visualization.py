@@ -30,7 +30,8 @@ def visualize_data():
                 fig_data.data[0].y = df['Predicted']
                 fig_data.data[1].x = df['Date']
                 fig_data.data[1].y = df['Actual']
-            pio.show(fig_data, auto_open=False)
+            
+            fig_data.show(config={'displayModeBar': False})
         else:
             print("Required columns not found in the data file.")
     else:
@@ -69,8 +70,8 @@ def visualize_conditions(condition_values):
                                      legend_title="Conditions",
                                      legend=dict(x=0.01, y=0.99, bordercolor="Black", borderwidth=1))
     else:
-        for i, trace in enumerate(fig_conditions['data']):
+        for i, trace in enumerate(fig_conditions.data):
             trace.x = updated_df['Date']
             trace.y = updated_df[trace.name]
 
-    pio.show(fig_conditions, auto_open=False)
+    fig_conditions.show(config={'displayModeBar': False})

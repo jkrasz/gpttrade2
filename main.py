@@ -49,7 +49,7 @@ def main():
                 
                 last_data_fetch_date = today
 
-        if is_market_open(): # or True:  # True is for testing without real-time market data
+        if is_market_open() or True:  # True is for testing without real-time market data
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty:
