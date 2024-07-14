@@ -47,7 +47,7 @@ def main():
                 
                 last_data_fetch_date = today
 
-        if is_market_open() or True:  # True is for testing without real-time market data
+        if is_market_open():# or True:  # True is for testing without real-time market data
             print('market is open')
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
@@ -100,7 +100,7 @@ def main():
 
             logger.info("Wait for the next iteration")
             print('market is open sleep 45')
-            sleep(5 * 60)  # Wait 45 minutes before the next iteration
+            sleep(45 * 60)  # Wait 45 minutes before the next iteration
         else:
             if today != last_data_fetch_date:
                 logger.info("Market closed. Processing after-market tasks.")
