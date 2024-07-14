@@ -53,8 +53,7 @@ def preprocess_data(data, sequence_length=60):
         X.append(scaled_data[i-sequence_length:i])
         y.append(scaled_data[i])
     X = np.array(X)
-    y = np.array(y)
-    
+    y = np.array(y).reshape(-1, 1)
     return X, y, scaler
 
 def save_data(predicted, actual):

@@ -11,8 +11,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
                risk_tolerance=0.15, profit_tolerance=0.25,
                adx_threshold=25, stochastic_k_threshold=20,
                sma_50=None, sma_200=None, rsi=None):
-    
-    # Extract metrics from current_data with defaults
+
     rsi = current_data.get('momentum_rsi', 100)
     macd = current_data.get('trend_macd', 0)
     macd_signal = current_data.get('trend_macd_signal', 0)
@@ -25,7 +24,11 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
     rsi_condition = 30 <= rsi <= 70 if rsi is not None else False
     current_date = datetime.now()
 
-    # Condition checks
+    # Ensure predicted_close_price is not None
+    if predicted_close_price is None:
+        logger.error("Predicted close price is None, skipping buy signal evaluation.")
+        return False, {}
+
     condition_dict = {
         'Volume': volume > average_volume * threshold_volume_increase,
         'EMA': ema_short > ema_long,
@@ -34,7 +37,7 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
         'Bollinger': close_price <= bb_lower_band,
         'ADX': adx > adx_threshold,
         'Stochastic K': stochastic_k < stochastic_k_threshold,
-        'AI': predicted_close_price > close_price * 1.1,  # Increase AI prediction threshold
+        'AI': predicted_close_price > close_price * 1.1,
         'Risk': predicted_close_price > close_price * (1 - risk_tolerance),
         'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
         'Price Jump': predicted_close_price > close_price * price_jump_threshold,
@@ -42,12 +45,13 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
         'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')
     }
 
+    
     buy_signal = sum(condition_dict.values()) >= 10
-
+    print(buy_signal)
     logger.info("Trading conditions checked: %s", condition_dict)
     logger.info("Buy signal: %s", buy_signal)
 
-    return buy_signal, condition_dict 
+    return buy_signal, condition_dict
 
 def should_sell(current_data, buy_price, stop_loss_percent=0.07, take_profit_percent=0.20, threshold_rsi_sell=65, current_price=None):
     # Use provided current price if available, otherwise fall back to the last known close price

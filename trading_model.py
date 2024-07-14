@@ -8,6 +8,9 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 from sklearn.svm import SVR
+from logger_config import setup_logging
+
+logger = setup_logging()
 
 class TransformerEncoderBlock(Layer):
     def __init__(self, embed_dim, num_heads, ff_dim, rate=0.1):
@@ -146,5 +149,10 @@ def predict_price(models, data, scaler, sequence_length=60):
     ])
 
     predicted_price = scaler.inverse_transform(ensemble_prediction.reshape(-1, 1))[0, 0]
+
+    # Ensure predicted_price is a valid number
+    if np.isnan(predicted_price):
+        logger.error("Predicted price is NaN.")
+        return None
 
     return predicted_price

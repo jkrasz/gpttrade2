@@ -34,12 +34,12 @@ def main():
             if not historical_data.empty:
                 X, y, scaler = preprocess_data(historical_data, sequence_length)
                 input_shape = (X.shape[1], X.shape[2])
-                
+                y = np.ravel(y)
                 # Split data into train and validation sets
                 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
-                
+                print ("train model")
                 models = train_models(X_train, y_train, input_shape, epochs=50, batch_size=32)
-                
+                print('Evaluate models on validation set')
                 # Evaluate models on validation set
                 for i, model in enumerate(models[:4]):  # Only evaluate deep learning models
                     val_loss = model.evaluate(X_val, y_val, verbose=0)
@@ -48,8 +48,10 @@ def main():
                 last_data_fetch_date = today
 
         if is_market_open() or True:  # True is for testing without real-time market data
+            print('market is open')
             current_price = fetch_current_price(symbol)
             actual_prices.append(current_price)
+            predicted_close_price = None
             if historical_data is not None and not historical_data.empty and models is not None:
                 latest_processed, _, _ = preprocess_data(historical_data.iloc[-sequence_length:], sequence_length)
                 if latest_processed.shape[0] > 0:
@@ -91,16 +93,19 @@ def main():
                     logger.info("Retraining models...")
                     X, y, scaler = preprocess_data(historical_data, sequence_length)
                     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
+                    y = np.ravel(y)
                     models = train_models(X_train, y_train, input_shape, epochs=50, batch_size=32)
             else:
                 logger.warning("Historical data is empty or models are not trained. Skipping this cycle.")
 
             logger.info("Wait for the next iteration")
-            sleep(45 * 60)  # Wait 30 minutes before the next iteration
+            print('market is open sleep 45')
+            sleep(5 * 60)  # Wait 45 minutes before the next iteration
         else:
             if today != last_data_fetch_date:
                 logger.info("Market closed. Processing after-market tasks.")
             logger.info("Market closed. Waiting...")
+            print('check in an hour')
             sleep(60 * 60)  # Check every hour
 
 if __name__ == "__main__":
