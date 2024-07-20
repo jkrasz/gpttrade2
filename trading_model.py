@@ -123,11 +123,21 @@ def train_models(X, y, input_shape, epochs=100, batch_size=32):
 
 def predict_price(models, data, scaler, sequence_length=60):
     lstm_model, gru_model, transformer_model, cnn_model, rf_model, gb_model, xgb_model, svr_model = models
-    last_sequence = data[-sequence_length:].reshape(-1, 1)
-    last_sequence_scaled = scaler.transform(last_sequence)
-    last_sequence_scaled_3d = np.reshape(last_sequence_scaled, (1, sequence_length, 1))
+    
+    # Extract the last sequence_length timesteps
+    last_sequence = data[-sequence_length:, :]
+    
+    # Reshape to 2D for scaling
+    last_sequence_2d = last_sequence.reshape(-1, last_sequence.shape[-1])
+    
+    # Scale the data
+    last_sequence_scaled = scaler.transform(last_sequence_2d)
+    
+    # Reshape for different model inputs
+    last_sequence_scaled_3d = last_sequence_scaled.reshape(1, sequence_length, -1)
     last_sequence_scaled_2d = last_sequence_scaled.reshape(1, -1)
 
+    # Make predictions
     predicted_scaled_lstm = lstm_model.predict(last_sequence_scaled_3d)
     predicted_scaled_gru = gru_model.predict(last_sequence_scaled_3d)
     predicted_scaled_transformer = transformer_model.predict(last_sequence_scaled_3d)
@@ -137,18 +147,44 @@ def predict_price(models, data, scaler, sequence_length=60):
     predicted_scaled_xgb = xgb_model.predict(last_sequence_scaled_2d)
     predicted_scaled_svr = svr_model.predict(last_sequence_scaled_2d)
 
-    ensemble_prediction = np.mean([
-        predicted_scaled_lstm,
-        predicted_scaled_gru,
-        predicted_scaled_transformer,
-        predicted_scaled_cnn,
-        predicted_scaled_rf,
-        predicted_scaled_gb,
-        predicted_scaled_xgb,
-        predicted_scaled_svr
-    ])
+    # Print predictions for debugging
+    print(f"Predicted Scaled LSTM: {predicted_scaled_lstm}")
+    print(f"Predicted Scaled GRU: {predicted_scaled_gru}")
+    print(f"Predicted Scaled Transformer: {predicted_scaled_transformer}")
+    print(f"Predicted Scaled CNN: {predicted_scaled_cnn}")
+    print(f"Predicted Scaled RF: {predicted_scaled_rf}")
+    print(f"Predicted Scaled GB: {predicted_scaled_gb}")
+    print(f"Predicted Scaled XGB: {predicted_scaled_xgb}")
+    print(f"Predicted Scaled SVG: {predicted_scaled_svr}")
 
-    predicted_price = scaler.inverse_transform(ensemble_prediction.reshape(-1, 1))[0, 0]
+    # Ensure all predictions are 1D arrays
+    predictions = [
+        predicted_scaled_lstm.flatten()[0],
+        predicted_scaled_gru.flatten()[0],
+        predicted_scaled_transformer.flatten()[0],
+        predicted_scaled_cnn.flatten()[0],
+        predicted_scaled_rf[0],
+        predicted_scaled_gb[0],
+        predicted_scaled_xgb[0],
+        predicted_scaled_svr[0]
+    ]
+
+    # Ensemble prediction
+    ensemble_prediction = np.mean(predictions)
+
+    # Create a dummy array with the correct number of features
+    dummy_array = np.zeros((1, last_sequence_2d.shape[1]))
+    
+    # Assume the prediction is for the closing price, which is typically the 4th column in OHLC data
+    # Adjust this index if your closing price is in a different position
+    closing_price_index = 3
+    
+    # Place the ensemble prediction in the dummy array
+    dummy_array[0, closing_price_index] = ensemble_prediction
+
+    # Inverse transform to get the actual price
+    predicted_prices = scaler.inverse_transform(dummy_array)
+    predicted_price = predicted_prices[0, closing_price_index]
 
     # Ensure predicted_price is a valid number
     if np.isnan(predicted_price):

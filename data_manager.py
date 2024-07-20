@@ -39,22 +39,43 @@ def fetch_data(symbol='GPRO', lookback_period=365):
     data = ta.add_all_ta_features(data, "open", "high", "low", "close", "volume", fillna=True)
     return data
 
-
 def preprocess_data(data, sequence_length=60):
     if not isinstance(data, pd.DataFrame):
         raise ValueError("Data needs to be a pandas DataFrame")
-    
-    # Assume the data includes the 'close' prices along with other features
+
+    print(f"Data length: {len(data)}, required: {sequence_length}")
+
+    if len(data) < sequence_length:
+        print(f"Not enough data to create sequences. Data length: {len(data)}, required: {sequence_length}")
+        return np.array([]), np.array([]), None
+
+    print(f"Original data: {data.tail()}")
+
     scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(data[['close']])  # Simplified for clarity; adapt as needed
+    scaled_data = scaler.fit_transform(data)
+
+    print(f"Scaled data: {scaled_data[-sequence_length:]}")
 
     X, y = [], []
-    for i in range(sequence_length, len(scaled_data)):
-        X.append(scaled_data[i-sequence_length:i])
-        y.append(scaled_data[i])
+    if len(scaled_data) == sequence_length:
+        X.append(scaled_data)
+    else:
+        for i in range(len(scaled_data) - sequence_length):
+            X.append(scaled_data[i:i+sequence_length])
+            y.append(scaled_data[i+sequence_length, list(data.columns).index('close')])
+
     X = np.array(X)
-    y = np.array(y).reshape(-1, 1)
+    y = np.array(y).reshape(-1, 1) if len(y) > 0 else np.array([])
+
+    print(f"Processed X: {X.shape}, y: {y.shape}")
+    if len(X) > 0:
+        print(f"Sample X[0]: {X[0]}")
+    if len(y) > 0:
+        print(f"Sample y[0]: {y[0]}")
+
     return X, y, scaler
+
+
 
 def save_data(predicted, actual):
     """Append the predicted and actual prices to a CSV file for persistence."""

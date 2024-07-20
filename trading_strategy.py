@@ -42,12 +42,17 @@ def should_buy(predicted_close_price, current_data, average_volume, ema_short, e
         'Profit': predicted_close_price > close_price * (1 + profit_tolerance),
         'Price Jump': predicted_close_price > close_price * price_jump_threshold,
         'Golden Cross': golden_cross,
-        'Date': current_date.strftime('%Y-%m-%d %H:%M:%S')
     }
 
+    # Count the number of True conditions
+    true_conditions = sum(1 for condition in condition_dict.values() if condition)
     
-    buy_signal = sum(condition_dict.values()) >= 10
-    print(buy_signal)
+    # Add the date to the condition_dict, but don't include it in the buy signal calculation
+    condition_dict['Date'] = current_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    buy_signal = true_conditions >= 10
+    print(f"Number of true conditions: {true_conditions}")
+    print(f"Buy signal: {buy_signal}")
     logger.info("Trading conditions checked: %s", condition_dict)
     logger.info("Buy signal: %s", buy_signal)
 
