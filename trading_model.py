@@ -97,7 +97,8 @@ def train_models(X, y, input_shape, epochs=100, batch_size=32):
         EarlyStopping(patience=10, restore_best_weights=True),
         ReduceLROnPlateau(factor=0.5, patience=5, min_lr=0.00001)
     ]
-
+     # Ensure y is a 1D array
+    y = y.ravel()
     lstm_model = build_advanced_lstm_model(input_shape)
     gru_model = build_advanced_gru_model(input_shape)
     transformer_model = build_advanced_transformer_model(input_shape)
@@ -171,6 +172,13 @@ def predict_price(models, data, scaler, sequence_length=60):
 
     # Ensemble prediction
     ensemble_prediction = np.mean(predictions)
+
+    # Check for NaN values
+    if np.isnan(ensemble_prediction):
+        logger.error("Ensemble prediction is NaN. Individual predictions:")
+        for i, pred in enumerate(predictions):
+            logger.error(f"Model {i+1}: {pred}")
+        return None
 
     # Create a dummy array with the correct number of features
     dummy_array = np.zeros((1, last_sequence_2d.shape[1]))

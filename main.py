@@ -5,12 +5,12 @@ import os
 from logger_config import setup_logging
 from data_manager import fetch_data, fetch_current_price, preprocess_data, is_market_open, save_data, load_data
 from trading_model import train_models, predict_price
-from visualization import visualize_data, visualize_conditions
 from email_notifications import send_email
 from trading_strategy import should_buy, should_sell
 from config import symbol, DATA_FILE, CONDITIONS_FILE
 import numpy as np
 from sklearn.model_selection import train_test_split
+from visualization import initialize_figures, update_data_plot, update_conditions_plot
 
 def main():
     logger = setup_logging()
@@ -21,10 +21,9 @@ def main():
     models = None
     in_position = False
     buy_price = 0
-    predicted_prices = []
-    actual_prices = []
-    conditions_history = []
-    visualize_data()
+    
+    # Initialize the visualization figures
+    initialize_figures()
 
     while True:
         today = date.today()
@@ -33,6 +32,10 @@ def main():
             historical_data = fetch_data(symbol)
             if not historical_data.empty:
                 X, y, scaler = preprocess_data(historical_data, sequence_length)
+                
+                # Use ravel() to ensure y is a 1d array
+                y = y.ravel()
+                
                 input_shape = (X.shape[1], X.shape[2])
                 
                 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
@@ -45,28 +48,21 @@ def main():
                 
                 last_data_fetch_date = today
 
-        if is_market_open():# or True:
+        if is_market_open() or True:
             current_price = fetch_current_price(symbol)
-            actual_prices.append(current_price)
             if historical_data is not None and not historical_data.empty and models is not None:                        
                 historical_data_slice = historical_data.iloc[-sequence_length:]
-                print(f"Number of rows in historical_data_slice: {len(historical_data_slice)}")
                 latest_processed, _, _ = preprocess_data(historical_data_slice, sequence_length)
-                print(f"latest_processed shape: {latest_processed.shape}")
                 
                 if latest_processed.shape[0] > 0:
-                    if latest_processed.shape[0] == 1:
-                        # Use the single sequence for prediction
-                        predicted_close_price = predict_price(models, latest_processed[0], scaler, sequence_length)
-                    else:
-                        # Use the last sequence for prediction
-                        predicted_close_price = predict_price(models, latest_processed[-1], scaler, sequence_length)
+                    predicted_close_price = predict_price(models, latest_processed[-1], scaler, sequence_length)
                     
                     if predicted_close_price is not None:
                         save_data(predicted_close_price, current_price)
-                        predicted_prices.append(predicted_close_price)
                         logger.info(f"Predicted price for {today.strftime('%Y-%m-%d')}: {predicted_close_price}, Actual: {current_price}")
                         
+                        # Update the data plot
+                        update_data_plot(today.strftime('%Y-%m-%d'), predicted_close_price, current_price)
     
                     # Calculate technical indicators
                     avg_volume = historical_data['volume'].rolling(window=20).mean().iloc[-1]
@@ -80,8 +76,11 @@ def main():
                                                               avg_volume, ema_short, ema_long, current_price=current_price,
                                                               sma_50=sma_50, sma_200=sma_200, rsi=rsi.iloc[-1])
 
-                    conditions_history.append(condition_values)
-                    visualize_conditions(conditions_history)
+                    # Add date to condition_values
+                    condition_values['Date'] = today.strftime('%Y-%m-%d')
+                    
+                    # Update the conditions plot
+                    update_conditions_plot(condition_values)
 
                     if not in_position and buy_signal:
                         in_position = True
@@ -96,9 +95,13 @@ def main():
                         send_email("Sell Signal", f"Sell at price {sell_price}. Profit/Loss: {profit_loss:.2f}%")
                         buy_price = 0  # Reset buy_price after selling
 
-                    if len(actual_prices) % 30 == 0:
+                    if len(condition_values) % 30 == 0:
                         logger.info("Retraining models...")
                         X, y, scaler = preprocess_data(historical_data, sequence_length)
+                        
+                        # Use ravel() here as well for retraining
+                        y = y.ravel()
+                        
                         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
                         models = train_models(X_train, y_train, input_shape, epochs=50, batch_size=32)
                 else:
@@ -107,11 +110,13 @@ def main():
                 logger.warning("Historical data is empty or models are not trained. Skipping this cycle.")
 
             logger.info("Wait for the next iteration")
+            print("Wait for the next iteration")
             sleep(45 * 60)
         else:
             if today != last_data_fetch_date:
                 logger.info("Market closed. Processing after-market tasks.")
             logger.info("Market closed. Waiting...")
+            print("Market closed. Waiting...")
             sleep(60 * 60)
 
 if __name__ == "__main__":
