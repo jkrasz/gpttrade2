@@ -10,7 +10,7 @@ from trading_strategy import should_buy, should_sell
 from config import symbol, DATA_FILE, CONDITIONS_FILE
 import numpy as np
 from sklearn.model_selection import train_test_split
-from visualization import initialize_figures, update_data_plot, update_conditions_plot
+from visualization import initialize_figures, update_data_plot, update_conditions_plot, load_and_update_historical_data, save_conditions_to_file
 
 def main():
     logger = setup_logging()
@@ -22,8 +22,9 @@ def main():
     in_position = False
     buy_price = 0
     
-    # Initialize the visualization figures
+    # Initialize the visualization figures and load historical data
     initialize_figures()
+    load_and_update_historical_data()
 
     while True:
         today = date.today()
@@ -50,7 +51,7 @@ def main():
 
         if is_market_open() or True:
             current_price = fetch_current_price(symbol)
-            if historical_data is not None and not historical_data.empty and models is not None:                        
+            if historical_data is not None and not historical_data.empty and models is not None:
                 historical_data_slice = historical_data.iloc[-sequence_length:]
                 latest_processed, _, _ = preprocess_data(historical_data_slice, sequence_length)
                 
@@ -81,6 +82,9 @@ def main():
                     
                     # Update the conditions plot
                     update_conditions_plot(condition_values)
+                    
+                    # Save conditions to file
+                    save_conditions_to_file(condition_values)
 
                     if not in_position and buy_signal:
                         in_position = True

@@ -75,8 +75,6 @@ def preprocess_data(data, sequence_length=60):
 
     return X, y, scaler
 
-
-
 def save_data(predicted, actual):
     """Append the predicted and actual prices to a CSV file for persistence."""
     df = pd.DataFrame({'Date': [datetime.now().strftime('%Y-%m-%d')], 'Predicted': [predicted], 'Actual': [actual]})
